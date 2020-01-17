@@ -61,6 +61,7 @@
      <Compile Include="Assets\Scripts\Scatterers_Finder_org.cs" />
      <Compile Include="Assets\Scripts\Scatterers_Finder_upd.cs" />
      <Compile Include="Assets\Scripts\Scatterers_Spawning.cs" />
+     <Compile Include="Assets\Visible_Triangles_Extraction.cs" />
  <Reference Include="Unity.TextMeshPro.Editor">
  <HintPath>/home/aleksei/3DChaSi/3DChaSi/GSCM1/Library/ScriptAssemblies/Unity.TextMeshPro.Editor.dll</HintPath>
  </Reference>

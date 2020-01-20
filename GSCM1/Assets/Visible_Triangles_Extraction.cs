@@ -14,6 +14,18 @@ public class Visible_Triangles_Extraction : MonoBehaviour
 
         Debug.Log("Number of buildings = " + Buildings.Length);
         Debug.Log("Number of roads = " + Roads.Length);
+
+        int building_count = 0;
+        foreach(GameObject building in Buildings)
+        {
+            building_count += 1;
+            Vector3[] vertices = building.GetComponent<MeshFilter>().mesh.vertices;
+            int[] triangles = building.GetComponent<MeshFilter>().mesh.triangles;
+            if (building_count == 1)
+            {
+                Debug.Log("Number of triangles in the first building = " + triangles);
+            }
+        }
         
     }
 

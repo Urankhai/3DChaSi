@@ -13,6 +13,7 @@ TagManager:
   - Antenna
   - DMC
   - mat_colors
+  - CG
   layers:
   - Default
   - TransparentFX

@@ -18,43 +18,122 @@ public class Visible_Walls_Counting : MonoBehaviour
         Debug.Log("Number of buildings = " + Buildings.Length);
         Debug.Log("Number of roads = " + Roads.Length);
 
+        var all_vrtx_list = new List<Vector3>();
+        var all_nrml_list = new List<Vector3>();
+
+        
+        foreach (GameObject building in Buildings)
+        {
+            Vector3[] vrtx = building.GetComponent<MeshFilter>().mesh.vertices;
+            Vector3[] nrml = building.GetComponent<MeshFilter>().mesh.normals;
+            
+            int vrtx_count = 0;
+            foreach (Vector3 v in vrtx)
+            {
+                if (v.y == 0)
+                {
+                    /*GameObject v_sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                    v_sphere.transform.position = v;
+                    var sphereRenderer = v_sphere.GetComponent<Renderer>();
+                    sphereRenderer.material.SetColor("_Color", Color.red);*/
+
+                    // adding all vertexes with zero elevation. Later on, this will be removed
+                    all_vrtx_list.Add(v);
+                    all_nrml_list.Add(nrml[vrtx_count]);
+                }
+                vrtx_count += 1;
+            }
+            
+        }
+        Debug.Log("The length of vertexes list = " + all_vrtx_list.Count);
+        //Debug.Log(" The length of normals list = " + all_nrml_list.Count);
 
 
         int road_count = 0;
 
+        int case_count = 0;
+
         foreach (GameObject road in Roads)
         {
             road_count += 1;
-            Vector3[] road_vertices = road.GetComponent<MeshFilter>().mesh.vertices;
-
-
-            //Debug.Log("Number of verteces in the road mesh = " + road_vertices.Length);
-
-            Vector3 road_cg = new Vector3(0, 0, 0);
-            Vector3 elev_cg = new Vector3(0, 1, 0);
-            
-            for (int k = 0; k < road_vertices.Length; k++)
+            if (road_count == 1)
             {
-                road_cg = road_cg + road_vertices[k];
-            }
-            road_cg = road_cg / road_vertices.Length;
+                Vector3[] road_vertices = road.GetComponent<MeshFilter>().mesh.vertices;
 
-            //Debug.Log("Position of the road elm " + road_cg);
-            GameObject road_sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            road_sphere.transform.position = road_cg + elev_cg;
-            
+                Vector3 road_cg = new Vector3(0, 0, 0);
+                Vector3 elev_cg = new Vector3(0, 1, 0);
 
-            foreach(GameObject building in Buildings)
-            {
-                Vector3[] vrtx = building.GetComponent<MeshFilter>().mesh.vertices;
-                Vector3[] nrml = building.GetComponent<MeshFilter>().mesh.normals;
-
-                foreach(Vector3 v in vrtx)
+                for (int k = 0; k < road_vertices.Length; k++)
                 {
-                    if ()
+                    road_cg = road_cg + road_vertices[k];
                 }
+                road_cg = road_cg / road_vertices.Length;
+
+                Vector3 elro_cg = road_cg + elev_cg;
+
+                //Debug.Log("Position of the road elm " + road_cg);
+                //GameObject road_sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                //road_sphere.transform.position = elro_cg;
+                //road_sphere.gameObject.tag = "CG";
+
+                for (int i = 0; i < all_nrml_list.Count; i++)
+                {
+                    // Vector that is pointing from the road center to a building vertex
+                    Vector3 cg2vrtx = all_vrtx_list[i] - elro_cg;
+
+                    if ( Vector3.Dot(cg2vrtx, all_nrml_list[i]) < 0 )
+                    {
+                        // Printing the directions
+                        //Debug.Log("Normal = " + all_nrml_list[i] + "; cg2vrtx = " + cg2vrtx);
+                        
+                        //Debug.DrawLine(all_vrtx_list[i], elro_cg, Color.magenta, 2.5f);
+                        //Debug.Log("Vertex = " + all_vrtx_list[i] + "; road center = " + elro_cg);
+
+                        /*RaycastHit hit;
+                        if ( (Physics.Raycast(all_vrtx_list[i], cg2vrtx.normalized, out hit, Mathf.Infinity)) )
+                        {
+                            if (hit.collider.tag == "CG")
+                            {
+                                case_count += 1;
+                                GameObject v_sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                                v_sphere.transform.position = all_vrtx_list[i];
+                                var sphereRenderer = v_sphere.GetComponent<Renderer>();
+                                sphereRenderer.material.SetColor("_Color", Color.red);
+                            }
+                        }*/
+
+                        if ( Physics.Linecast(all_vrtx_list[i], elro_cg) )
+                        {
+                            //case_count += 1;
+                        }
+                        else
+                        {
+                            if ( Physics.Linecast(elro_cg, all_vrtx_list[i]) )
+                            {
+
+                            }
+                            else
+                            {
+                                GameObject v_sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                                v_sphere.transform.position = all_vrtx_list[i];
+                                var sphereRenderer = v_sphere.GetComponent<Renderer>();
+                                sphereRenderer.material.SetColor("_Color", Color.red);
+                                case_count += 1;
+                            }
+                            
+                        }
+
+
+
+
+                        
+                    }
+                }
+
             }
         }
+
+        Debug.Log("Number of cases " + case_count);
 
         
         //Debug.Log("Number of roads = "+ road_count);

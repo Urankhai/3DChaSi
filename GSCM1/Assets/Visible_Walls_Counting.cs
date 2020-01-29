@@ -81,16 +81,16 @@ public class Visible_Walls_Counting : MonoBehaviour
                     // Vector that is pointing from the road center to a building vertex
                     Vector3 cg2vrtx = all_vrtx_list[i] - elro_cg;
 
-                    if ( Vector3.Dot(cg2vrtx, all_nrml_list[i]) < 0 )
-                    {
+                    //if ( Vector3.Dot(cg2vrtx, all_nrml_list[i]) < 0 )
+                    //{
                         // Printing the directions
                         //Debug.Log("Normal = " + all_nrml_list[i] + "; cg2vrtx = " + cg2vrtx);
-                        
+
                         //Debug.DrawLine(all_vrtx_list[i], elro_cg, Color.magenta, 2.5f);
                         //Debug.Log("Vertex = " + all_vrtx_list[i] + "; road center = " + elro_cg);
 
                         /*RaycastHit hit;
-                        if ( (Physics.Raycast(all_vrtx_list[i], cg2vrtx.normalized, out hit, Mathf.Infinity)) )
+                        if ( (Physics.Raycast(elro_cg, cg2vrtx.normalized, out hit, Mathf.Infinity)) )
                         {
                             if (hit.collider.tag == "CG")
                             {
@@ -101,33 +101,28 @@ public class Visible_Walls_Counting : MonoBehaviour
                                 sphereRenderer.material.SetColor("_Color", Color.red);
                             }
                         }*/
-
-                        if ( Physics.Linecast(all_vrtx_list[i], elro_cg) )
+                        RaycastHit hit;
+                        if ( Physics.Linecast(elro_cg, all_vrtx_list[i] + all_nrml_list[i],out hit) )
                         {
+                            //Debug.Log("Hit object name " + hit.collider.name );
                             //case_count += 1;
                         }
                         else
                         {
-                            if ( Physics.Linecast(elro_cg, all_vrtx_list[i]) )
-                            {
-
-                            }
-                            else
-                            {
-                                GameObject v_sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-                                v_sphere.transform.position = all_vrtx_list[i];
-                                var sphereRenderer = v_sphere.GetComponent<Renderer>();
-                                sphereRenderer.material.SetColor("_Color", Color.red);
-                                case_count += 1;
-                            }
-                            
+                            GameObject v_sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                            v_sphere.transform.position = all_vrtx_list[i];
+                            var sphereRenderer = v_sphere.GetComponent<Renderer>();
+                            sphereRenderer.material.SetColor("_Color", Color.red);
+                            case_count += 1;
                         }
+                            
+                     
 
 
 
 
                         
-                    }
+                    //}
                 }
 
             }

@@ -7,16 +7,25 @@ public class Visible_Walls_Counting : MonoBehaviour
     
     private GameObject[] Buildings;
     private GameObject[] Roads;
+    private GameObject[] Streets;
 
     // Start is called before the first frame update
     void Start()
     {
         Buildings = GameObject.FindGameObjectsWithTag("Reflecting_Obstacles");
         Roads = GameObject.FindGameObjectsWithTag("Roads");
+        Streets = GameObject.FindGameObjectsWithTag("CG");
 
 
         Debug.Log("Number of buildings = " + Buildings.Length);
         Debug.Log("Number of roads = " + Roads.Length);
+        Debug.Log("Number of streets cubes = " + Streets.Length);
+
+        for (int k = 0; k < Streets.Length; k++)
+        {
+            Debug.Log("Loop number = " + k + Streets[k].name);
+        }
+
 
         var all_vrtx_list = new List<Vector3>();
         var all_nrml_list = new List<Vector3>();
@@ -56,7 +65,7 @@ public class Visible_Walls_Counting : MonoBehaviour
         foreach (GameObject road in Roads)
         {
             road_count += 1;
-            if (road_count == 1)
+            if (road_count > 0)
             {
                 Vector3[] road_vertices = road.GetComponent<MeshFilter>().mesh.vertices;
 
@@ -72,8 +81,8 @@ public class Visible_Walls_Counting : MonoBehaviour
                 Vector3 elro_cg = road_cg + elev_cg;
 
                 //Debug.Log("Position of the road elm " + road_cg);
-                //GameObject road_sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-                //road_sphere.transform.position = elro_cg;
+                GameObject road_sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                road_sphere.transform.position = elro_cg;
                 //road_sphere.gameObject.tag = "CG";
 
                 for (int i = 0; i < all_nrml_list.Count; i++)
@@ -102,7 +111,7 @@ public class Visible_Walls_Counting : MonoBehaviour
                             }
                         }*/
                         RaycastHit hit;
-                        if ( Physics.Linecast(elro_cg, all_vrtx_list[i] + all_nrml_list[i],out hit) )
+                        if ( Physics.Linecast(elro_cg, all_vrtx_list[i] + 0.1f*all_nrml_list[i],out hit) )
                         {
                             //Debug.Log("Hit object name " + hit.collider.name );
                             //case_count += 1;
@@ -112,9 +121,10 @@ public class Visible_Walls_Counting : MonoBehaviour
                             GameObject v_sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
                             v_sphere.transform.position = all_vrtx_list[i];
                             var sphereRenderer = v_sphere.GetComponent<Renderer>();
-                            sphereRenderer.material.SetColor("_Color", Color.red);
+                            sphereRenderer.material.SetColor("_Color", Color.cyan);
                             case_count += 1;
-                        }
+                            //Debug.DrawLine(all_vrtx_list[i], elro_cg, Color.cyan, 5.0f);
+                    }
                             
                      
 

@@ -4,7 +4,7 @@ using UnityEngine;
 using System.Linq;
 
 
-public class Visible_Walls_Counting : MonoBehaviour
+public class Visible_Walls_Counting_upd : MonoBehaviour
 {
 
     private GameObject[] Buildings;
@@ -28,38 +28,7 @@ public class Visible_Walls_Counting : MonoBehaviour
         //Sorting a list of gameobjects by name. It is helpful when the streets ends are not defined sequentially.
         var sortedStreets = Streets.OrderBy(go => go.name).ToList();
 
-        var all_vrtx_list = new List<Vector3>();
-        var all_nrml_list = new List<Vector3>();
-
-
-        foreach (GameObject building in Buildings)
-        {
-            Vector3[] vrtx = building.GetComponent<MeshFilter>().mesh.vertices;
-            Vector3[] nrml = building.GetComponent<MeshFilter>().mesh.normals;
-
-            int vrtx_count = 0;
-            foreach (Vector3 v in vrtx)
-            {
-                if (v.y == 0)
-                {
-                    /*GameObject v_sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-                    v_sphere.transform.position = v;
-                    var sphereRenderer = v_sphere.GetComponent<Renderer>();
-                    sphereRenderer.material.SetColor("_Color", Color.red);*/
-
-                    // adding all vertexes with zero elevation. Later on, this will be removed
-                    all_vrtx_list.Add(v);
-                    all_nrml_list.Add(nrml[vrtx_count]);
-                }
-                vrtx_count += 1;
-            }
-
-        }
-        Debug.Log("The length of vertexes list = " + all_vrtx_list.Count);
-        //Debug.Log(" The length of normals list = " + all_nrml_list.Count);
-
-
-
+        
         int street_number = 0;
         var all_obs_points = new List<Vector3>();
         Vector3 elev_cg = new Vector3(0, 1, 0);
@@ -94,8 +63,35 @@ public class Visible_Walls_Counting : MonoBehaviour
             }
         }
 
-        Debug.Log("The number of observation points = " + all_obs_points.Count);
-        //Debug.Log("Collider type " + obs_point_col);
+
+        var all_vrtx_list = new List<Vector3>();
+        var all_nrml_list = new List<Vector3>();
+
+
+        foreach (GameObject building in Buildings)
+        {
+            Vector3[] vrtx = building.GetComponent<MeshFilter>().mesh.vertices;
+            Vector3[] nrml = building.GetComponent<MeshFilter>().mesh.normals;
+
+            int vrtx_count = 0;
+            foreach (Vector3 v in vrtx)
+            {
+                if (v.y == 0)
+                {
+                    /*GameObject v_sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                    v_sphere.transform.position = v;
+                    var sphereRenderer = v_sphere.GetComponent<Renderer>();
+                    sphereRenderer.material.SetColor("_Color", Color.red);*/
+
+                    // adding all vertexes with zero elevation. Later on, this will be removed
+                    all_vrtx_list.Add(v);
+                    all_nrml_list.Add(nrml[vrtx_count]);
+                }
+                vrtx_count += 1;
+            }
+
+        }
+        Debug.Log("The length of vertexes list = " + all_vrtx_list.Count);
 
         int regular_case_count = 0;
 

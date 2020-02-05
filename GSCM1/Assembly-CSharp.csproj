@@ -47,6 +47,7 @@
   <ItemGroup>
      <Compile Include="Assets\Scatterers_Spawning_near_Visible_Walls.cs" />
      <Compile Include="Assets\Scatterers_Spawning_near_Visible_Walls_upd.cs" />
+     <Compile Include="Assets\Scatterers_Spawning_near_Visible_Walls_upd2.cs" />
      <Compile Include="Assets\Scripts\AgentControl.cs" />
      <Compile Include="Assets\Scripts\Data_holding.cs" />
      <Compile Include="Assets\Scripts\LoS_visualization.cs" />

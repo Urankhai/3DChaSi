@@ -14,6 +14,7 @@ TagManager:
   - DMC
   - mat_colors
   - CG
+  - Observation_Points
   layers:
   - Default
   - TransparentFX

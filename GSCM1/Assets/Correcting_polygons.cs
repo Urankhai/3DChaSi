@@ -18,6 +18,16 @@ public class Correcting_polygons : MonoBehaviour
     private GameObject[] Buildings;
     private GameObject[] Observation_Points;
 
+    public List<V6> SeenV6_MPC1 = new List<V6>();
+    public List<V7> SeenV7_MPC1 = new List<V7>();
+    int MPC1_num = 0;
+    public List<V6> SeenV6_MPC2 = new List<V6>();
+    public List<V7> SeenV7_MPC2 = new List<V7>();
+    int MPC2_num = 0;
+    public List<V6> SeenV6_MPC3 = new List<V6>();
+    public List<V7> SeenV7_MPC3 = new List<V7>();
+    int MPC3_num = 0;
+
 
     // Start is called before the first frame update
     void Start()
@@ -95,6 +105,11 @@ public class Correcting_polygons : MonoBehaviour
         }
         Debug.Log("The number of seen Buildings = " + Building_list.Count);
 
+        List<Vector3> GlobalMPC1 = new List<Vector3>();
+
+        List<Vector3> GlobalMPC2 = new List<Vector3>();
+
+        List<Vector3> GlobalMPC3 = new List<Vector3>();
 
         // analyzing each seen building separately
         for (int k = 0; k < Building_list.Count; k++)
@@ -174,26 +189,109 @@ public class Correcting_polygons : MonoBehaviour
             Vector3 s1_0 = shift1;
 
             Vector3 n2_0 = floor_nrml[0];
-            Vector3 p2_0 = point2;
-            Vector3 s2_0 = shift2;
+            Vector3 p2_0 = floor_vrtx[0]; 
+            Vector3 s2_0 = floor_vrtx[0] + WW1 * floor_nrml[0];
+            
+            Area34 area = new Area34(p1_0, s1_0, p2_0, s2_0);
+            //DrawArea(area);
 
             Vector3 v1_0 = s1_0 - p1_0;
             Vector3 v2_0 = s2_0 - p2_0;
 
-            List<V6> MPC1_V6 = new List<V6>();
-
-            if (k == 12)
+            //int MPC1_num = 0;
+            for (int ii = 0; ii < MPC1_V6.Count; ii++)
             {
-                Debug.Log("Check");
+                if (!GlobalMPC1.Contains(MPC1_V6[ii].Coordinates))
+                {
+
+                    SeenV6_MPC1.Add(MPC1_V6[ii]);
+                    V7 tempV7_MPC1 = new V7(MPC1_V6[ii], MPC1_num);
+                    SeenV7_MPC1.Add(tempV7_MPC1);
+                    GlobalMPC1.Add(MPC1_V6[ii].Coordinates);
+
+                    GameObject cleared_sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+
+                    cleared_sphere.transform.position = MPC1_V6[ii].Coordinates;
+                    Destroy(cleared_sphere.GetComponent<SphereCollider>()); // remove collider
+                    // cleared_sphere.name = "Building #" + k + "; mpc1 #" + MPC1_num;
+                    cleared_sphere.name = "mpc1 #" + MPC1_num;
+                    var sphereRenderer = cleared_sphere.GetComponent<Renderer>();
+                    sphereRenderer.material = MPC1_mat;
+                    cleared_sphere.transform.localScale = new Vector3(0.5f, 0.5f, 0.5f);
+
+                    MPC1_num += 1;
+                }
+            }
+
+            //int MPC2_num = 0;
+            for (int ii = 0; ii < MPC2_V6.Count; ii++)
+            {
+                if (!GlobalMPC2.Contains(MPC2_V6[ii].Coordinates))
+                {
+                    
+                    SeenV6_MPC2.Add(MPC2_V6[ii]);
+                    V7 tempV7_MPC2 = new V7(MPC2_V6[ii], MPC2_num);
+                    SeenV7_MPC2.Add(tempV7_MPC2);
+                    GlobalMPC2.Add(MPC2_V6[ii].Coordinates);
+
+                    GameObject cleared_sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+
+                    cleared_sphere.transform.position = MPC2_V6[ii].Coordinates;
+                    Destroy(cleared_sphere.GetComponent<SphereCollider>()); // remove collider
+                    cleared_sphere.name = "mpc2 #" + MPC2_num;
+                    var sphereRenderer = cleared_sphere.GetComponent<Renderer>();
+                    sphereRenderer.material = MPC2_mat;
+                    cleared_sphere.transform.localScale = new Vector3(0.5f, 0.5f, 0.5f);
+
+                    MPC2_num += 1;
+                }
+            }
+
+            //int MPC3_num = 0;
+            for (int ii = 0; ii < MPC3_V6.Count; ii++)
+            {
+                if (!GlobalMPC3.Contains(MPC3_V6[ii].Coordinates))
+                {
+                    
+                    SeenV6_MPC3.Add(MPC3_V6[ii]);
+                    V7 tempV7_MPC3 = new V7(MPC3_V6[ii], MPC3_num);
+                    SeenV7_MPC3.Add(tempV7_MPC3);
+                    GlobalMPC3.Add(MPC3_V6[ii].Coordinates);
+
+                    GameObject cleared_sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+
+                    cleared_sphere.transform.position = MPC3_V6[ii].Coordinates;
+                    Destroy(cleared_sphere.GetComponent<SphereCollider>()); // remove collider
+                    cleared_sphere.name = "mpc3 #" + MPC3_num;
+                    var sphereRenderer = cleared_sphere.GetComponent<Renderer>();
+                    sphereRenderer.material = MPC3_mat;
+                    cleared_sphere.transform.localScale = new Vector3(0.5f, 0.5f, 0.5f);
+
+                    MPC3_num += 1;
+                }
             }
 
 
-            if (p1_0 == p2_0) // the polygon is a triangle
+
+            // draw areas for all vertices
+            Vector3 point1 = new Vector3(0.0f, 0.0f, 0.0f);
+            Vector3 point2 = new Vector3(0.0f, 0.0f, 0.0f);
+            Vector3 shift1 = new Vector3(0.0f, 0.0f, 0.0f);
+            Vector3 shift2 = new Vector3(0.0f, 0.0f, 0.0f);
+            for (int l = 0; l < floor_vrtx.Count - 1; l++)
             {
-                // the area of the polygon 
-                Area2D(v1_0, v2_0, out float S);
-                // check if MPC is within the given traingle
-                for (int i = 0; i < NeabyMPC1.Count; i++)
+                point1 = floor_vrtx[l];
+                point2 = floor_vrtx[l + 1];
+                
+                shift1 = floor_vrtx[l] + WW1 * floor_nrml[l];
+                shift2 = floor_vrtx[l+1] + WW1 * floor_nrml[l+1];
+
+                PickMPC(floor_nrml[l], point1, shift1, floor_nrml[l + 1], point2, shift2, NeabyMPC1, out List<V6> for_MPC1_V6);
+                PickMPC(floor_nrml[l], point1, shift1, floor_nrml[l + 1], point2, shift2, NeabyMPC2, out List<V6> for_MPC2_V6);
+                PickMPC(floor_nrml[l], point1, shift1, floor_nrml[l + 1], point2, shift2, NeabyMPC3, out List<V6> for_MPC3_V6);
+
+                
+                for (int ii = 0; ii < for_MPC1_V6.Count; ii++)
                 {
                     Vector3 v1 = s1_0 - NeabyMPC1[i];
                     Vector3 v2 = p1_0 - NeabyMPC1[i];
@@ -204,55 +302,86 @@ public class Correcting_polygons : MonoBehaviour
                     Area2D(v3, v1, out float S3);
                     if (Mathf.Abs(S - S1 - S2 - S3) < 0.001)
                     {
-                        // if the sum of areas is almost equal to the whole area, then the MPC is included into the active set of MPCs
-                        MPC1_V6.Add(new V6(NeabyMPC1[i], 0.5f*(n1_0 + n2_0)));
+
+                        SeenV6_MPC1.Add(for_MPC1_V6[ii]);
+                        V7 tempV7_MPC1 = new V7(for_MPC1_V6[ii], MPC1_num);
+                        SeenV7_MPC1.Add(tempV7_MPC1);
+                        GlobalMPC1.Add(for_MPC1_V6[ii].Coordinates);
 
                         GameObject cleared_sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
 
                         cleared_sphere.transform.position = NeabyMPC1[i];
                         Destroy(cleared_sphere.GetComponent<SphereCollider>()); // remove collider
+                        cleared_sphere.name = "mpc1 #" + MPC1_num;
                         var sphereRenderer = cleared_sphere.GetComponent<Renderer>();
                         sphereRenderer.material = MPC1_mat;
-                        cleared_sphere.transform.localScale = new Vector3(1.3f, 1.3f, 1.3f);
+                        cleared_sphere.transform.localScale = new Vector3(0.5f, 0.5f, 0.5f);
+
+                        MPC1_num += 1;
                     }
                 }
-            }
-            else // the polygon is not a triangle
-            {
-                if (k == 12)
+                
+                for (int ii = 0; ii < for_MPC2_V6.Count; ii++)
                 {
-                    Debug.Log("Check");
+                    if (!GlobalMPC2.Contains(for_MPC2_V6[ii].Coordinates))
+                    {
+
+                        SeenV6_MPC2.Add(for_MPC2_V6[ii]);
+                        V7 tempV7_MPC2 = new V7(for_MPC2_V6[ii], MPC2_num);
+                        SeenV7_MPC2.Add(tempV7_MPC2);
+                        GlobalMPC2.Add(for_MPC2_V6[ii].Coordinates);
+
+                        GameObject cleared_sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+
+                        cleared_sphere.transform.position = for_MPC2_V6[ii].Coordinates;
+                        Destroy(cleared_sphere.GetComponent<SphereCollider>()); // remove collider
+                        cleared_sphere.name = "mpc2 #" + MPC2_num;
+                        var sphereRenderer = cleared_sphere.GetComponent<Renderer>();
+                        sphereRenderer.material = MPC2_mat;
+                        cleared_sphere.transform.localScale = new Vector3(0.5f, 0.5f, 0.5f);
+
+                        MPC2_num += 1;
+                    }
                 }
                 float dot_prod_normals = Vector3.Dot(n1_0, n2_0);
 
                 if (dot_prod_normals <= 0)    // then the polygon is not convex
                 {
-                    // in this case, we consider two triangles separately
-                    
-
-                    Vector3 v11 = p1_0 - s1_0;
-                    Vector3 v12 = p2_0 - s1_0;
-                    Area2D(v11, v12, out float S1);
-                    
-                    Vector3 v21 = p1_0 - s2_0;
-                    Vector3 v22 = p2_0 - s2_0;
-                    Area2D(v21, v22, out float S2);
-
-                    for (int i = 0; i < NeabyMPC1.Count; i++)
+                    if (!GlobalMPC3.Contains(for_MPC3_V6[ii].Coordinates))
                     {
-                        Vector3 vv1 = p1_0 - NeabyMPC1[i];
-                        Vector3 vv2 = p2_0 - NeabyMPC1[i];
 
-                        Vector3 vv31 = s1_0 - NeabyMPC1[i];
-                        Vector3 vv32 = s2_0 - NeabyMPC1[i];
+                        SeenV6_MPC3.Add(for_MPC3_V6[ii]);
+                        V7 tempV7_MPC3 = new V7(for_MPC3_V6[ii], MPC3_num);
+                        SeenV7_MPC3.Add(tempV7_MPC3);
+                        GlobalMPC3.Add(for_MPC3_V6[ii].Coordinates);
+
+                        GameObject cleared_sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+
+                        cleared_sphere.transform.position = for_MPC3_V6[ii].Coordinates;
+                        Destroy(cleared_sphere.GetComponent<SphereCollider>()); // remove collider
+                        cleared_sphere.name = "mpc3 #" + MPC3_num;
+                        var sphereRenderer = cleared_sphere.GetComponent<Renderer>();
+                        sphereRenderer.material = MPC3_mat;
+                        cleared_sphere.transform.localScale = new Vector3(0.5f, 0.5f, 0.5f);
+
+                        MPC3_num += 1;
+                    }
+                }
+
+                area = new Area34(point1, shift1, point2, shift2);
+                //DrawArea(area);
+            }
+            
 
                         Area2D(vv1, vv2, out float S11);
 
-                        Area2D(vv1, vv31, out float SS12);
-                        Area2D(vv31, vv2, out float SS13);
+        }
+        Debug.Log("Number of seen MPC1 = " + SeenV6_MPC1.Count);
+        Debug.Log("Number of seen MPC2 = " + SeenV6_MPC2.Count);
+        Debug.Log("Number of seen MPC3 = " + SeenV6_MPC3.Count);
+    }
 
-                        Area2D(vv1, vv32, out float SS22);
-                        Area2D(vv32, vv2, out float SS23);
+    
 
                         if (Mathf.Abs(S1 - S11 - SS12 - SS13) < 0.001)
                         {
@@ -280,7 +409,40 @@ public class Correcting_polygons : MonoBehaviour
                             cleared_sphere.transform.localScale = new Vector3(1.3f, 1.3f, 1.3f);
                         }
 
-                    }
+
+
+
+
+
+
+
+
+
+    void PickMPC(Vector3 n1, Vector3 p1, Vector3 s1, Vector3 n2, Vector3 p2, Vector3 s2, List<Vector3> ListOfNearbyScatterers, out List<V6> MPC_V6)
+    {
+        MPC_V6 = new List<V6>();
+
+        if (p1 == p2) // the polygon is a triangle
+        {
+            Vector3 side1 = s1 - p1;
+            Vector3 side2 = s2 - p2;
+            // the area of the polygon 
+            Area2D(side1, side2, out float S);
+
+            // check if MPC is within the given traingle
+            for (int i = 0; i < ListOfNearbyScatterers.Count; i++)
+            {
+                Vector3 v1 = s1 - ListOfNearbyScatterers[i];
+                Vector3 v2 = p1 - ListOfNearbyScatterers[i];
+                Vector3 v3 = s2 - ListOfNearbyScatterers[i];
+                // calculate areas of the triangles; if the sum of 3 is equal to the polygon area, then the point is in the trianlge
+                Area2D(v1, v2, out float S1);
+                Area2D(v2, v3, out float S2);
+                Area2D(v3, v1, out float S3);
+                if (Mathf.Abs(S - S1 - S2 - S3) < 0.001)
+                {
+                    // if the sum of areas is almost equal to the whole area, then the MPC is included into the active set of MPCs
+                    MPC_V6.Add(new V6(ListOfNearbyScatterers[i], 0.5f * (n1 + n2)));
                 }
                 else // the polygon is convex
                 {
@@ -355,6 +517,49 @@ public class Correcting_polygons : MonoBehaviour
 
 
 
+
+
+
+    // time measurement can be performed using this code
+    //var watch = System.Diagnostics.Stopwatch.StartNew();
+    // the code that you want to measure comes here
+    //watch.Stop();
+    //var elapsedMs = watch.ElapsedMilliseconds;
+
+    /* Example on functions that work with lists
+
+    List<int> asd1 = new List<int>();
+    for (int i = 0; i < 6; i++) { asd1.Add(i); }
+    List<int> asd2 = new List<int>();
+    for (int i = 0; i < 3; i++) { asd2.Add(i + 10); }
+
+    // according to https://stackoverflow.com/questions/4488054/merge-two-or-more-lists-into-one-in-c-sharp-net, the used approach is the most effective one
+    var twolists = new List<int>(asd1.Count + asd2.Count);
+    twolists.AddRange(asd2);
+    twolists.AddRange(asd1);
+    string out2list = "";
+    foreach (int inlist in twolists) { out2list += inlist + "; "; }
+    Debug.Log(out2list);
+
+    twolists.RemoveRange(1, 3);
+    string out2listupd = "";
+    foreach (int inlist in twolists) { out2listupd += inlist + "; "; }
+    Debug.Log(out2listupd);
+
+    */
+
+
+
+
+
+
+
+
+
+
+
+
+
     void Area2D(Vector3 v1, Vector3 v2, out float S)
     {
         S = 0.5f * Mathf.Abs(-v1.x * v2.z + v1.z * v2.x);
@@ -372,7 +577,7 @@ public class Correcting_polygons : MonoBehaviour
         }
     }
 
-
+    /*
     void DrawArea(Area34 area)
     {
         Debug.DrawLine(area.p1, area.p2, Color.cyan, 5.0f);
@@ -380,6 +585,7 @@ public class Correcting_polygons : MonoBehaviour
         Debug.DrawLine(area.s2, area.s1, Color.green, 5.0f);
         Debug.DrawLine(area.s1, area.p1, Color.yellow, 5.0f);
     }
+    */
 }
 
 public class V6
@@ -392,6 +598,20 @@ public class V6
     {
         Coordinates = vrtx;
         Normal = nrml;
+    }
+
+}
+
+public class V7
+{
+    public V6 CoordNorm;
+    public int Number;
+
+
+    public V7(V6 MPC, int num)
+    {
+        CoordNorm = MPC;
+        Number = num;
     }
 
 }

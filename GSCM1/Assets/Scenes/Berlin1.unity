@@ -226,7 +226,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 18084764}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4d6030eda7425ce49bb1833595f0ac75, type: 3}
+  m_Script: {fileID: 11500000, guid: e7626c4260f9cc24db0dcc4b364c24dc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
 --- !u!4 &18084766
@@ -5439,7 +5439,6 @@ GameObject:
   - component: {fileID: 1107463542}
   - component: {fileID: 1107463541}
   - component: {fileID: 1107463540}
-  - component: {fileID: 1107463539}
   - component: {fileID: 1107463544}
   m_Layer: 0
   m_Name: Antenna1
@@ -5448,20 +5447,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &1107463539
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1107463538}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a46d687f4f07f4e44b36af8a20293aee, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  Reachable_distance: 70
-  Ant2: {fileID: 1533634962}
 --- !u!135 &1107463540
 SphereCollider:
   m_ObjectHideFlags: 0
@@ -5545,7 +5530,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 1107463538}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b082a5494207d334b876cc2f9e411848, type: 3}
+  m_Script: {fileID: 11500000, guid: cc03fe653168d1144a6c671290d24afd, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   Reachable_distance: 70
@@ -5659,16 +5644,16 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1147916807}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 95099b095583a24479890c5265625bbb, type: 3}
+  m_Script: {fileID: 11500000, guid: e66b9c6f1a532124bbd88a4df954efc3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Rx: {fileID: 1107463538}
-  Tx: {fileID: 1533634962}
+  Rx: {fileID: 1533634962}
+  Tx: {fileID: 1107463538}
   LOS_Tracer: 1
   MPC1_Tracer: 1
-  MPC2_Tracer: 1
+  MPC2_Tracer: 0
   MPC3_Tracer: 0
 --- !u!4 &1147916809
 Transform:
@@ -5691,16 +5676,16 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1147916807}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 598913ba3c0a66d4d9ef3bdf79a59389, type: 3}
+  m_Script: {fileID: 11500000, guid: 04fe68716782c354089b1b443b8caeaa, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  useJobs: 1
-  Rx: {fileID: 1107463538}
-  Tx: {fileID: 1533634962}
-  LOS_Tracer: 0
-  MPC1_Tracer: 0
+  useJobs: 0
+  Rx: {fileID: 1533634962}
+  Tx: {fileID: 1107463538}
+  LOS_Tracer: 1
+  MPC1_Tracer: 1
   MPC2_Tracer: 0
   MPC3_Tracer: 0
 --- !u!1 &1159693618
@@ -7807,7 +7792,6 @@ GameObject:
   - component: {fileID: 1533634966}
   - component: {fileID: 1533634965}
   - component: {fileID: 1533634964}
-  - component: {fileID: 1533634963}
   - component: {fileID: 1533634968}
   m_Layer: 0
   m_Name: Antenna2
@@ -7816,20 +7800,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &1533634963
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1533634962}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a46d687f4f07f4e44b36af8a20293aee, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  Reachable_distance: 70
-  Ant2: {fileID: 1107463538}
 --- !u!135 &1533634964
 SphereCollider:
   m_ObjectHideFlags: 0
@@ -7913,15 +7883,15 @@ MonoBehaviour:
   m_GameObject: {fileID: 1533634962}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b082a5494207d334b876cc2f9e411848, type: 3}
+  m_Script: {fileID: 11500000, guid: cc03fe653168d1144a6c671290d24afd, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   Reachable_distance: 70
   seen_MPC1: 
   seen_MPC2: 
   seen_MPC3: 
-  Activate_MPC1: 0
-  Activate_MPC2: 0
+  Activate_MPC1: 1
+  Activate_MPC2: 1
   Activate_MPC3: 0
 --- !u!1 &1534638524
 GameObject:

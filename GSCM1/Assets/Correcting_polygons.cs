@@ -346,7 +346,7 @@ public class Correcting_polygons : MonoBehaviour
             }
             
 
-                        Area2D(vv1, vv2, out float S11);
+                        //Area2D(vv1, vv2, out float S11);
 
         }
         Debug.Log("Number of seen MPC1 = " + SeenV6_MPC1.Count);

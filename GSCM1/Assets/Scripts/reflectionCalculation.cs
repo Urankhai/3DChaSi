@@ -16,11 +16,7 @@ public class reflectionCalculation : MonoBehaviour
     RaycastHit reflect;
     RaycastHit hitLOS;
 
-    // Use this for initialization
-    void Start()
-    {
 
-    }
 
     // Update is called once per frame
     void Update()

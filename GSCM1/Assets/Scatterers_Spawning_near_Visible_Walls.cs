@@ -125,9 +125,5 @@ public class Scatterers_Spawning_near_Visible_Walls : MonoBehaviour
 
 
     }
-    // Update is called once per frame
-    void Update()
-    {
-
-    }
+    
 }

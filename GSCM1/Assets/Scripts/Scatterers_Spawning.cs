@@ -384,10 +384,5 @@ public class Scatterers_Spawning : MonoBehaviour
 
     }
 
-    // Update is called once per frame
-    void Update()
-    {
-
-    }
 
 }

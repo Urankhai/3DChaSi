@@ -78,7 +78,7 @@ public class Scatterers_Finder_upd : MonoBehaviour
 
                     //Color initcolor = objectRenderer.material.GetColor("_Color");
 
-                    if ((hit_from1.collider.tag == "MPC1") && (hit_to1.collider.tag == "Antenna"))
+                    if ((hit_from1.collider.CompareTag("MPC1")) && (hit_to1.collider.CompareTag("Antenna")))
                     {
                         var objectRenderer = scatterers[i].GetComponent<Renderer>();
                         objectRenderer.material.SetColor("_Color", Color.red);

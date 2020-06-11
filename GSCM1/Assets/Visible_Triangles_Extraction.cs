@@ -108,9 +108,4 @@ public class Visible_Triangles_Extraction : MonoBehaviour
 
     }
 
-    // Update is called once per frame
-    void Update()
-    {
-        
-    }
 }

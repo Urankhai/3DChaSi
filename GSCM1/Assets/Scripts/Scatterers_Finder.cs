@@ -81,7 +81,7 @@ public class Scatterers_Finder : MonoBehaviour
         RaycastHit LoS_to, LoS_from;
         if ( (Physics.Raycast(ant2.transform.position, LoS, out LoS_to)) && (Physics.Raycast(ant1.transform.position, -LoS, out LoS_from)) )
         {
-            if (LoS_to.collider.tag == "Antenna" && LoS_from.collider.tag == "Antenna")
+            if (LoS_to.collider.CompareTag("Antenna") && LoS_from.collider.CompareTag("Antenna"))
             {
                 float LoS_dist = LoS.magnitude;
                 Debug.DrawLine(ant1.transform.position, ant2.transform.position, Color.magenta);
@@ -103,7 +103,7 @@ public class Scatterers_Finder : MonoBehaviour
 
                     //Color initcolor = objectRenderer.material.GetColor("_Color");
 
-                    if ((hit_from1.collider.tag == MPC_name) && (hit_to1.collider.tag == "Antenna"))
+                    if ((hit_from1.collider.CompareTag(MPC_name)) && (hit_to1.collider.CompareTag("Antenna")))
                     {
                         seen_by_ant1.Add(scatterers[i]);
                     }
@@ -123,7 +123,7 @@ public class Scatterers_Finder : MonoBehaviour
                 RaycastHit hit_from2, hit_to2;
                 if (Physics.Raycast(ant2.transform.position, AB2, out hit_from2) && Physics.Raycast(scatterers[j].transform.position, -AB2, out hit_to2))
                 {
-                    if ((hit_from2.collider.tag == MPC_name) && (hit_to2.collider.tag == "Antenna"))
+                    if ((hit_from2.collider.CompareTag(MPC_name)) && (hit_to2.collider.CompareTag("Antenna")))
                     {
                         seen_by_ant2.Add(scatterers[j]);
                     }
@@ -171,7 +171,7 @@ public class Scatterers_Finder : MonoBehaviour
                         RaycastHit hit_to, hit_from;
                         if ((Physics.Raycast(seen_by_ant2[l].transform.position, AB, out hit_to)) && (Physics.Raycast(seen_by_ant1[k].transform.position, -AB, out hit_from)))
                         {
-                            if (hit_to.collider.tag == MPC_name && hit_from.collider.tag == MPC_name)
+                            if (hit_to.collider.CompareTag(MPC_name) && hit_from.collider.CompareTag(MPC_name))
                             {
                                 scnd_ordr.Add(seen_by_ant2[l]);
 
@@ -218,7 +218,7 @@ public class Scatterers_Finder : MonoBehaviour
                             if ((Physics.Raycast(seen_by_ant1[kk].transform.position, p2p, out hit_to)) && (Physics.Raycast(scatterers[ii].transform.position, -p2p, out hit_from)))
                             {
 
-                                if (hit_to.collider.tag == MPC_name && hit_from.collider.tag == MPC_name)
+                                if (hit_to.collider.CompareTag(MPC_name) && hit_from.collider.CompareTag(MPC_name))
                                 {
 
                                     for (int ll = 0; ll < seen_by_ant2.Count; ll++)
@@ -237,7 +237,7 @@ public class Scatterers_Finder : MonoBehaviour
                                             RaycastHit hit_to2, hit_from2;
                                             if ((Physics.Raycast(scatterers[ii].transform.position, p2pp2p, out hit_to2)) && (Physics.Raycast(seen_by_ant2[ll].transform.position, -p2pp2p, out hit_from2)))
                                             {
-                                                if (hit_to2.collider.tag == MPC_name && hit_from2.collider.tag == MPC_name)
+                                                if (hit_to2.collider.CompareTag(MPC_name) && hit_from2.collider.CompareTag(MPC_name))
                                                 {
                                                     
                                                     mpc_to_mpc.Add(scatterers[ii]);

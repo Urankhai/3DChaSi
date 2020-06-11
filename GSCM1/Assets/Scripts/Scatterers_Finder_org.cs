@@ -86,7 +86,7 @@ public class Scatterers_Finder_org : MonoBehaviour
                 RaycastHit hit2;
                 if ((Physics.Raycast(scatterers[i].transform.position, AB1, out hit1)) && (Physics.Raycast(scatterers[i].transform.position, AB2, out hit2)))
                 {
-                    if (hit1.collider.tag == "Antenna" && hit2.collider.tag == "Antenna")
+                    if (hit1.collider.CompareTag("Antenna") && hit2.collider.CompareTag("Antenna"))
                     {
                         //Debug.Log("OK1");
                         var objectRenderer = scatterers[i].GetComponent<Renderer>();

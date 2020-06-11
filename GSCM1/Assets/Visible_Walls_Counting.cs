@@ -128,9 +128,5 @@ public class Visible_Walls_Counting : MonoBehaviour
 
 
     }
-    // Update is called once per frame
-    void Update()
-    {
 
-    }
 }

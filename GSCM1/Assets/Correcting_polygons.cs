@@ -12,8 +12,8 @@ public class Correcting_polygons : MonoBehaviour
     public Material MPC1_mat;
     public Material MPC2_mat;
     public Material MPC3_mat;
-    public Material ObsPoint_Material;
-    public Material CG_Material;
+    
+    
     
     private GameObject[] Buildings;
     private GameObject[] Observation_Points;
@@ -554,7 +554,7 @@ public class Correcting_polygons : MonoBehaviour
     */
 }
 
-public class V6
+public struct V6
 {
     public Vector3 Coordinates;
     public Vector3 Normal;

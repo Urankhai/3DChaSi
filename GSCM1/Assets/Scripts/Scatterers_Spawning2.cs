@@ -17,7 +17,7 @@ public class Scatterers_Spawning2 : MonoBehaviour
     public float chiW3; // = 2*0.044; %W3 is third order
 
     // setting materials
-    public Material ObsPoint_Material;
+    // public Material ObsPoint_Material;
 
     // subset of the seen MPCs
     public List<Vector3> MPC1_possiblepositionList = new List<Vector3>();

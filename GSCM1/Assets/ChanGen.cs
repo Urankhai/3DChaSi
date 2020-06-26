@@ -32,7 +32,7 @@ public class ChanGen : MonoBehaviour
     public bool MPC2_Tracer;
     public bool MPC3_Tracer;
 
-    int update_flag = 0;
+    //int update_flag = 0;
 
     List<V6> MPC1;
     List<V6> MPC2;
@@ -57,6 +57,7 @@ public class ChanGen : MonoBehaviour
         Rx_Seen_MPC_Script = Rx.GetComponent<Transceiver_Channel>();
     }
 
+    /*
     // Update is called once per frame
     void Update()
     {
@@ -72,128 +73,136 @@ public class ChanGen : MonoBehaviour
 
 
     }
+    */
 
     private void FixedUpdate()
     {
-        if (update_flag != 0)
+        Rx_MPC1 = Rx_Seen_MPC_Script.seen_MPC1;
+        Rx_MPC2 = Rx_Seen_MPC_Script.seen_MPC2;
+        Rx_MPC3 = Rx_Seen_MPC_Script.seen_MPC3;
+
+        Tx_MPC1 = Tx_Seen_MPC_Script.seen_MPC1;
+        Tx_MPC2 = Tx_Seen_MPC_Script.seen_MPC2;
+        Tx_MPC3 = Tx_Seen_MPC_Script.seen_MPC3;
+
+
+
+        ///////////////////////////////////////////////////////////////////////////////////
+        /// LOS
+        ///////////////////////////////////////////////////////////////////////////////////
+        // float startTime = Time.realtimeSinceStartup;
+        if (!Physics.Linecast(Tx.transform.position, Rx.transform.position))
         {
-
-            ///////////////////////////////////////////////////////////////////////////////////
-            /// LOS
-            ///////////////////////////////////////////////////////////////////////////////////
-            // float startTime = Time.realtimeSinceStartup;
-            if (!Physics.Linecast(Tx.transform.position, Rx.transform.position))
+            float LOS_distance = (Tx.transform.position - Rx.transform.position).magnitude;
+            if (LOS_Tracer)
             {
-                float LOS_distance = (Tx.transform.position - Rx.transform.position).magnitude;
-                if (LOS_Tracer)
+                Debug.DrawLine(Tx.transform.position, Rx.transform.position, Color.magenta);
+            }
+        }
+        // Debug.Log(((Time.realtimeSinceStartup - startTime) * 1000000f) + "microsec");
+        ///////////////////////////////////////////////////////////////////////////////////
+        /// MPC1
+        ///////////////////////////////////////////////////////////////////////////////////
+        List<int> common_mpc1 = new List<int>();
+
+        CommonMPC1(Rx_MPC1, Tx_MPC1, out common_mpc1);
+
+        List<int> active_MPC1 = new List<int>();
+        for (int i = 0; i < common_mpc1.Count; i++)
+
+        {
+            // defining peprendicular to the considered normal that is parallel to the ground. 
+            Vector3 n_perp = new Vector3(-MPC1[common_mpc1[i]].Normal.z, 0, MPC1[common_mpc1[i]].Normal.x);
+            float rx_distance = (Rx.transform.position - MPC1[common_mpc1[i]].Coordinates).magnitude;
+            float tx_distance = (Rx.transform.position - MPC1[common_mpc1[i]].Coordinates).magnitude;
+            Vector3 rx_direction = (Rx.transform.position - MPC1[common_mpc1[i]].Coordinates).normalized;
+            Vector3 tx_direction = (Tx.transform.position - MPC1[common_mpc1[i]].Coordinates).normalized;
+
+            if ((Vector3.Dot(n_perp, rx_direction) * Vector3.Dot(n_perp, tx_direction)) < 0)
+            {
+                active_MPC1.Add(common_mpc1[i]);
+                if (MPC1_Tracer)
                 {
-                    Debug.DrawLine(Tx.transform.position, Rx.transform.position, Color.magenta);
+                    Debug.DrawLine(Rx.transform.position, MPC1[common_mpc1[i]].Coordinates, Color.red);
+                    Debug.DrawLine(Tx.transform.position, MPC1[common_mpc1[i]].Coordinates, Color.blue);
                 }
             }
-            // Debug.Log(((Time.realtimeSinceStartup - startTime) * 1000000f) + "microsec");
-            ///////////////////////////////////////////////////////////////////////////////////
-            /// MPC1
-            ///////////////////////////////////////////////////////////////////////////////////
-            List<int> common_mpc1 = new List<int>();
+        }
 
-            CommonMPC1(Rx_MPC1, Tx_MPC1, out common_mpc1);
 
-            List<int> active_MPC1 = new List<int>();
-            for (int i = 0; i < common_mpc1.Count; i++)
 
+
+        ///////////////////////////////////////////////////////////////////////////////////
+        /// MPC2
+        ///////////////////////////////////////////////////////////////////////////////////
+        List<Path2> second_order_paths = new List<Path2>();
+
+        int brute_force = 1;
+        for (int i = 0; i < Rx_MPC2.Count; i++)
+        {
+            List<GeoComp> temp_list = new List<GeoComp>();
+            if (brute_force == 1)
             {
-                // defining peprendicular to the considered normal that is parallel to the ground. 
-                Vector3 n_perp = new Vector3(-MPC1[common_mpc1[i]].Normal.z, 0, MPC1[common_mpc1[i]].Normal.x);
-                float rx_distance = (Rx.transform.position - MPC1[common_mpc1[i]].Coordinates).magnitude;
-                float tx_distance = (Rx.transform.position - MPC1[common_mpc1[i]].Coordinates).magnitude;
-                Vector3 rx_direction = (Rx.transform.position - MPC1[common_mpc1[i]].Coordinates).normalized;
-                Vector3 tx_direction = (Tx.transform.position - MPC1[common_mpc1[i]].Coordinates).normalized;
-
-                if ((Vector3.Dot(n_perp, rx_direction) * Vector3.Dot(n_perp, tx_direction)) < 0)
-                {
-                    active_MPC1.Add(common_mpc1[i]);
-                    if (MPC1_Tracer)
-                    {
-                        Debug.DrawLine(Rx.transform.position, MPC1[common_mpc1[i]].Coordinates, Color.red);
-                        Debug.DrawLine(Tx.transform.position, MPC1[common_mpc1[i]].Coordinates, Color.blue);
-                    }
-                }
+                temp_list = GlobeCom2[Rx_MPC2[i]];
             }
-
-            
-            
-            
-            ///////////////////////////////////////////////////////////////////////////////////
-            /// MPC2
-            ///////////////////////////////////////////////////////////////////////////////////
-            List<Path2> second_order_paths = new List<Path2>();
-
-            int brute_force = 1;
-            for (int i = 0; i < Rx_MPC2.Count; i++)
+            else
             {
-                List<GeoComp> temp_list = new List<GeoComp>();
-                if (brute_force == 1)
+                for (int j = 0; j < MPC2.Count; j++)
                 {
-                    temp_list = GlobeCom2[Rx_MPC2[i]];
-                }
-                else
-                {
-                    for (int j = 0; j < MPC2.Count; j++)
+                    float dist_xxx = (MPC2[j].Coordinates - MPC2[Rx_MPC2[i]].Coordinates).magnitude;
+                    if (dist_xxx < 70)
                     {
-                        float dist_xxx = (MPC2[j].Coordinates - MPC2[Rx_MPC2[i]].Coordinates).magnitude;
-                        if (dist_xxx < 70)
+                        if (!Physics.Linecast(MPC2[j].Coordinates, MPC2[Rx_MPC2[i]].Coordinates))
                         {
-                            if (!Physics.Linecast(MPC2[j].Coordinates, MPC2[Rx_MPC2[i]].Coordinates))
-                            {
-                                float aod = Mathf.Acos(Vector3.Dot((MPC2[j].Coordinates - MPC2[Rx_MPC2[i]].Coordinates).normalized, MPC2[j].Normal));
-                                float aoa = Mathf.Acos(-Vector3.Dot((MPC2[j].Coordinates - MPC2[Rx_MPC2[i]].Coordinates).normalized, MPC2[Rx_MPC2[i]].Normal));
-                                GeoComp asd = new GeoComp(j, dist_xxx, aod, aoa);
-                                temp_list.Add(asd);
-                            }
+                            float aod = Mathf.Acos(Vector3.Dot((MPC2[j].Coordinates - MPC2[Rx_MPC2[i]].Coordinates).normalized, MPC2[j].Normal));
+                            float aoa = Mathf.Acos(-Vector3.Dot((MPC2[j].Coordinates - MPC2[Rx_MPC2[i]].Coordinates).normalized, MPC2[Rx_MPC2[i]].Normal));
+                            GeoComp asd = new GeoComp(j, dist_xxx, aod, aoa);
+                            temp_list.Add(asd);
                         }
                     }
                 }
+            }
 
-                for (int ii = 0; ii < Tx_MPC2.Count; ii++)
+            for (int ii = 0; ii < Tx_MPC2.Count; ii++)
+            {
+                if (temp_list.Any(geocom => geocom.MPCIndex == Tx_MPC2[ii]))
                 {
-                    if (temp_list.Any(geocom => geocom.MPCIndex == Tx_MPC2[ii]))
+                    int temp_index = temp_list.FindIndex(geocom => geocom.MPCIndex == Tx_MPC2[ii]);
+                    // defining peprendicular to the considered normal that is parallel to the ground. 
+                    V6 temp_Rx_MPC2 = MPC2[Rx_MPC2[i]];
+                    V6 temp_Tx_MPC2 = MPC2[Tx_MPC2[ii]];
+
+                    Vector3 n_perp1 = new Vector3(-temp_Rx_MPC2.Normal.z, 0, temp_Rx_MPC2.Normal.x);
+                    Vector3 Rx_dir1 = (Rx.transform.position - temp_Rx_MPC2.Coordinates).normalized;
+                    Vector3 RT = (temp_Tx_MPC2.Coordinates - temp_Rx_MPC2.Coordinates).normalized;
+
+                    Vector3 n_perp2 = new Vector3(-temp_Tx_MPC2.Normal.z, 0, temp_Tx_MPC2.Normal.x);
+                    Vector3 Tx_dir2 = (Tx.transform.position - temp_Tx_MPC2.Coordinates).normalized;
+                    Vector3 TR = (temp_Rx_MPC2.Coordinates - temp_Tx_MPC2.Coordinates).normalized;
+
+                    if ((Vector3.Dot(n_perp1, Rx_dir1) * Vector3.Dot(n_perp1, RT) < 0) && (Vector3.Dot(n_perp2, Tx_dir2) * Vector3.Dot(n_perp2, TR) < 0))
                     {
-                        int temp_index = temp_list.FindIndex(geocom => geocom.MPCIndex == Tx_MPC2[ii]);
-                        // defining peprendicular to the considered normal that is parallel to the ground. 
-                        V6 temp_Rx_MPC2 = MPC2[Rx_MPC2[i]];
-                        V6 temp_Tx_MPC2 = MPC2[Tx_MPC2[ii]];
+                        float rx_distance2MPC2 = (Rx.transform.position - MPC2[Rx_MPC2[i]].Coordinates).magnitude;
+                        float tx_distance2MPC2 = (Tx.transform.position - MPC2[Tx_MPC2[ii]].Coordinates).magnitude;
+                        float MPC2_distance = temp_list[temp_index].Distance;
+                        float total_distance = rx_distance2MPC2 + MPC2_distance + tx_distance2MPC2;
 
-                        Vector3 n_perp1 = new Vector3(-temp_Rx_MPC2.Normal.z, 0, temp_Rx_MPC2.Normal.x);
-                        Vector3 Rx_dir1 = (Rx.transform.position - temp_Rx_MPC2.Coordinates).normalized;
-                        Vector3 RT = (temp_Tx_MPC2.Coordinates - temp_Rx_MPC2.Coordinates).normalized;
-
-                        Vector3 n_perp2 = new Vector3(-temp_Tx_MPC2.Normal.z, 0, temp_Tx_MPC2.Normal.x);
-                        Vector3 Tx_dir2 = (Tx.transform.position - temp_Tx_MPC2.Coordinates).normalized;
-                        Vector3 TR = (temp_Rx_MPC2.Coordinates - temp_Tx_MPC2.Coordinates).normalized;
-
-                        if ((Vector3.Dot(n_perp1, Rx_dir1) * Vector3.Dot(n_perp1, RT) < 0) && (Vector3.Dot(n_perp2, Tx_dir2) * Vector3.Dot(n_perp2, TR) < 0))
+                        Path2 temp_path2 = new Path2(Rx.transform.position, MPC2[Rx_MPC2[i]].Coordinates, MPC2[Tx_MPC2[ii]].Coordinates, Tx.transform.position, total_distance);
+                        second_order_paths.Add(temp_path2);
+                        if (MPC2_Tracer)
                         {
-                            float rx_distance2MPC2 = (Rx.transform.position - MPC2[Rx_MPC2[i]].Coordinates).magnitude;
-                            float tx_distance2MPC2 = (Tx.transform.position - MPC2[Tx_MPC2[ii]].Coordinates).magnitude;
-                            float MPC2_distance = temp_list[temp_index].Distance;
-                            float total_distance = rx_distance2MPC2 + MPC2_distance + tx_distance2MPC2;
-
-                            Path2 temp_path2 = new Path2(Rx.transform.position, MPC2[Rx_MPC2[i]].Coordinates, MPC2[Tx_MPC2[ii]].Coordinates, Tx.transform.position, total_distance);
-                            second_order_paths.Add(temp_path2);
-                            if (MPC2_Tracer)
-                            {
-                                Debug.DrawLine(temp_path2.Rx_Point, temp_path2.MPC2_1, Color.green);
-                                Debug.DrawLine(temp_path2.MPC2_1, temp_path2.MPC2_2, Color.yellow);
-                                Debug.DrawLine(temp_path2.MPC2_2, temp_path2.Tx_Point, Color.cyan);
-                            }
+                            Debug.DrawLine(temp_path2.Rx_Point, temp_path2.MPC2_1, Color.green);
+                            Debug.DrawLine(temp_path2.MPC2_1, temp_path2.MPC2_2, Color.yellow);
+                            Debug.DrawLine(temp_path2.MPC2_2, temp_path2.Tx_Point, Color.cyan);
                         }
                     }
                 }
-
             }
-
 
         }
+
+
+
     }
 
     void CommonMPC1(List<int> List1, List<int> List2, out List<int> CommonList)
@@ -202,9 +211,23 @@ public class ChanGen : MonoBehaviour
     }
 }
 
+public struct Path1
+{
+    public Vector3 Rx_Point;
+    public Vector3 MPC1;
+    public Vector3 Tx_Point;
+    public float Distance;
 
+    public Path1(Vector3 a, Vector3 b, Vector3 c, float distance)
+    {
+        Rx_Point = a;
+        MPC1 = b;
+        Tx_Point = c;
+        Distance = distance;
+    }
+}
 
-public class Path2
+public struct Path2
 {
     public Vector3 Rx_Point;
     public Vector3 MPC2_1;
@@ -222,21 +245,39 @@ public class Path2
     }
 }
 
-public class Path3
+public struct Path3
 {
     public Vector3 Rx_Point;
     public Vector3 MPC3_1;
     public Vector3 MPC3_2;
     public Vector3 MPC3_3;
     public Vector3 Tx_Point;
+    public float Distance;
 
-    public Path3(Vector3 a, Vector3 b, Vector3 c, Vector3 d, Vector3 e)
+    public Path3(Vector3 a, Vector3 b, Vector3 c, Vector3 d, Vector3 e, float distance)
     {
         Rx_Point = a;
         MPC3_1 = b;
         MPC3_2 = c;
         MPC3_3 = d;
         Tx_Point = e;
+        Distance = distance;
     }
 
+}
+
+ public struct Path3Half
+{
+    public Vector3 Point;
+    public Vector3 MPC3_1;
+    public Vector3 MPC3_2;
+    public float Distance;
+
+    public Path3Half(Vector3 a, Vector3 b, Vector3 c, float distance)
+    {
+        Point = a;
+        MPC3_1 = b;
+        MPC3_2 = c;
+        Distance = distance;
+    }
 }

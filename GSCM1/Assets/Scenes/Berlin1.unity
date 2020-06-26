@@ -229,6 +229,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e7626c4260f9cc24db0dcc4b364c24dc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  Indexes_GC2: []
+  Indexes_GC3: []
 --- !u!4 &18084766
 Transform:
   m_ObjectHideFlags: 0
@@ -3706,8 +3708,6 @@ MonoBehaviour:
   MPC1_mat: {fileID: 2100000, guid: d32ccc4b469efebd4b4a01eb34026800, type: 2}
   MPC2_mat: {fileID: 2100000, guid: a39bc29665b861c4ea27866dfb601332, type: 2}
   MPC3_mat: {fileID: 2100000, guid: ac828eea9429a3b2ba86edbfa5c09535, type: 2}
-  ObsPoint_Material: {fileID: 2100000, guid: 5489137629fb5bc01acda075b31682f7, type: 2}
-  CG_Material: {fileID: 2100000, guid: a39bc29665b861c4ea27866dfb601332, type: 2}
 --- !u!4 &778518597
 Transform:
   m_ObjectHideFlags: 0
@@ -5644,7 +5644,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1147916807}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e66b9c6f1a532124bbd88a4df954efc3, type: 3}
   m_Name: 
@@ -5676,7 +5676,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1147916807}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 04fe68716782c354089b1b443b8caeaa, type: 3}
   m_Name: 
@@ -5684,9 +5684,9 @@ MonoBehaviour:
   useJobs: 0
   Rx: {fileID: 1533634962}
   Tx: {fileID: 1107463538}
-  LOS_Tracer: 0
-  MPC1_Tracer: 0
-  MPC2_Tracer: 0
+  LOS_Tracer: 1
+  MPC1_Tracer: 1
+  MPC2_Tracer: 1
   MPC3_Tracer: 0
 --- !u!1 &1159693618
 GameObject:
@@ -6537,7 +6537,6 @@ MonoBehaviour:
   chiW1: 0.044
   chiW2: 0.066
   chiW3: 0.088
-  ObsPoint_Material: {fileID: 2100000, guid: 5489137629fb5bc01acda075b31682f7, type: 2}
   MPC1_possiblepositionList: []
   MPC2_possiblepositionList: []
   MPC3_possiblepositionList: []
@@ -8512,7 +8511,6 @@ MonoBehaviour:
   chiW1: 0.044
   chiW2: 0.066
   chiW3: 0.088
-  ObsPoint_Material: {fileID: 2100000, guid: 5489137629fb5bc01acda075b31682f7, type: 2}
   MPC1_possiblepositionList: []
   MPC2_possiblepositionList: []
   MPC3_possiblepositionList: []

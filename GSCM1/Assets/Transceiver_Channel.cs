@@ -10,21 +10,17 @@ using Unity.Burst;
 
 public class Transceiver_Channel : MonoBehaviour
 {
-    //[SerializeField] private bool useJobs;
-
     public int Reachable_distance;
     // defining moved distance
     Vector3 d1; // for antenna #1
     
     // defining initial position of antennas and the area of search
     Vector3 old_position1; // for antenna #1
-    float covered_distance = 1;
-
+    
     float ant1_min_x;
     float ant1_max_x;
     float ant1_min_z;
     float ant1_max_z;
-
 
     private int XMIN_index1;
     private int XMAX_index1;
@@ -213,10 +209,10 @@ public class Transceiver_Channel : MonoBehaviour
     }
 
     // Update is called once per frame
-    void Update()
+    private void FixedUpdate()
     {
         d1 = transform.position - old_position1;
-        covered_distance = covered_distance + d1.magnitude;
+        
         // update the old position. Now, current position become old for the next position.
         old_position1 = transform.position;
         // in x axis
@@ -237,16 +233,9 @@ public class Transceiver_Channel : MonoBehaviour
         ToRemove(temp_V7_list2, d1, ant1_min_x, ant1_max_x, ant1_min_z, ant1_max_z, out List<int> ToBeRemoved2);
         ToRemove(temp_V7_list3, d1, ant1_min_x, ant1_max_x, ant1_min_z, ant1_max_z, out List<int> ToBeRemoved3);
 
-        /* //this approach also slower than the standard one
-         
-        float startTime2 = Time.realtimeSinceStartup;
-        ToRemoveParralel(temp_V7_list1, inarea_MPC1, d1, ant1_min_x, ant1_max_x, ant1_min_z, ant1_max_z, out List<int> ToBeRomeved);
-        Debug.Log("Check 2: " + ((Time.realtimeSinceStartup - startTime2) * 1000000f) + " microsec");
-        */
-
+        
         if (ToBeRemoved1.Count > 0)
         {
-            // Debug.Log("Something to delete");
             // remove the elements listed in ToBeRemoved list
             inarea_MPC1 = inarea_MPC1.Except(ToBeRemoved1).ToList();
 
@@ -327,7 +316,6 @@ public class Transceiver_Channel : MonoBehaviour
 
         if (ToBeAdd1.Count > 0)
         {
-            //Debug.Log("Something to add");
             // add the elements listed in ToBeAdd list
             var twolists = new List<int>(inarea_MPC1.Count + ToBeAdd1.Count);
             twolists.AddRange(inarea_MPC1);
@@ -335,31 +323,12 @@ public class Transceiver_Channel : MonoBehaviour
 
             inarea_MPC1 = twolists;
 
-            /*
-            float startTime1 = Time.realtimeSinceStartup;
-            
-            // Update edges of the updated list InArea
-            List<V7> test_V7_list1 = new List<V7>();
-            for (int i = 0; i < inarea_MPC1.Count; i++)
-            {
-                V7 temp_V7 = new V7(MPC1[inarea_MPC1[i]], inarea_MPC1[i]);
-                test_V7_list1.Add(temp_V7);
-            }
-
-            Debug.Log("Check 1: " + ((Time.realtimeSinceStartup - startTime1) * 1000000f) + "microsec, size of the list = " + test_V7_list1.Count);
-            */
-            
-            // this approach tens of times quicker
-            // float startTime2 = Time.realtimeSinceStartup;
-
             for (int i = 0; i < ToBeAdd1.Count; i++)
             {
                 V7 temp_V7 = new V7(MPC1[ToBeAdd1[i]], ToBeAdd1[i]);
                 temp_V7_list1.Add(temp_V7);
             }
             
-            // Debug.Log("Check 2: " + ((Time.realtimeSinceStartup - startTime2) * 1000000f) + "microsec, size of the list = " + temp_V7_list1.Count);
-
             // finding edges of inarea_MPC1 in x and z directions
             List<V7> XsortV7_1 = temp_V7_list1.OrderBy(Elm => Elm.CoordNorm.Coordinates.x).ToList();
             List<V7> ZsortV7_1 = temp_V7_list1.OrderBy(Elm => Elm.CoordNorm.Coordinates.z).ToList();
@@ -428,237 +397,74 @@ public class Transceiver_Channel : MonoBehaviour
 
         }
 
-        float startTime1 = Time.realtimeSinceStartup;
-        if (covered_distance >= 1f)
+        seen_MPC1 = new List<int>();
+        for (int i = 0; i < inarea_MPC1.Count; i++)
         {
-            covered_distance = 0f;
-            seen_MPC1 = new List<int>();
-            for (int i = 0; i < inarea_MPC1.Count; i++)
+
+            Vector3 temp_direction = MPC1[inarea_MPC1[i]].Coordinates - transform.position;
+            if (Vector3.Dot(MPC1[inarea_MPC1[i]].Normal, temp_direction) < 0)
             {
-
-                Vector3 temp_direction = MPC1[inarea_MPC1[i]].Coordinates - transform.position;
-                if (Vector3.Dot(MPC1[inarea_MPC1[i]].Normal, temp_direction) < 0)
+                if (!Physics.Linecast(transform.position, MPC1[inarea_MPC1[i]].Coordinates))
                 {
-                    if (!Physics.Linecast(transform.position, MPC1[inarea_MPC1[i]].Coordinates))
+                    seen_MPC1.Add(inarea_MPC1[i]);
+                    if (Activate_MPC1)
                     {
-                        seen_MPC1.Add(inarea_MPC1[i]);
-                        if (Activate_MPC1)
-                        {
-                            int temp_number = inarea_MPC1[i];
-                            string temp_name = "mpc1 #" + temp_number;
-                            near_MPC1 = GameObject.Find(temp_name);
-                            near_MPC1.transform.localScale = new Vector3(1.5f, 1.5f, 1.5f);
-                        }
-                    }
-                }
-            }
-
-            seen_MPC2 = new List<int>();
-            for (int i = 0; i < inarea_MPC2.Count; i++)
-            {
-
-                Vector3 temp_direction = MPC2[inarea_MPC2[i]].Coordinates - transform.position;
-                if (Vector3.Dot(MPC2[inarea_MPC2[i]].Normal, temp_direction) < 0)
-                {
-                    if (!Physics.Linecast(transform.position, MPC2[inarea_MPC2[i]].Coordinates))
-                    {
-                        seen_MPC2.Add(inarea_MPC2[i]);
-                        if (Activate_MPC2)
-                        {
-                            int temp_number = inarea_MPC2[i];
-                            string temp_name = "mpc2 #" + temp_number;
-                            near_MPC2 = GameObject.Find(temp_name);
-                            near_MPC2.transform.localScale = new Vector3(1.5f, 1.5f, 1.5f);
-                        }
-                    }
-                }
-            }
-
-            seen_MPC3 = new List<int>();
-            for (int i = 0; i < inarea_MPC3.Count; i++)
-            {
-
-                Vector3 temp_direction = MPC3[inarea_MPC3[i]].Coordinates - transform.position;
-                if (Vector3.Dot(MPC3[inarea_MPC3[i]].Normal, temp_direction) < 0)
-                {
-                    if (!Physics.Linecast(transform.position, MPC3[inarea_MPC3[i]].Coordinates))
-                    {
-                        seen_MPC3.Add(inarea_MPC3[i]);
-                        if (Activate_MPC3)
-                        {
-                            int temp_number = inarea_MPC3[i];
-                            string temp_name = "mpc3 #" + temp_number;
-                            near_MPC3 = GameObject.Find(temp_name);
-                            near_MPC3.transform.localScale = new Vector3(1.5f, 1.5f, 1.5f);
-                        }
+                        int temp_number = inarea_MPC1[i];
+                        string temp_name = "mpc1 #" + temp_number;
+                        near_MPC1 = GameObject.Find(temp_name);
+                        near_MPC1.transform.localScale = new Vector3(1.5f, 1.5f, 1.5f);
                     }
                 }
             }
         }
-        //float time1 = (Time.realtimeSinceStartup - startTime1) *1000000f;
-        Debug.Log("Check 1: " + ((Time.realtimeSinceStartup - startTime1) * 1000000f) + " microsec");
-        /*
-        var threelists = new List<V7>(temp_V7_list1.Count + temp_V7_list2.Count + temp_V7_list3.Count);
-        threelists.AddRange(temp_V7_list1);
-        threelists.AddRange(temp_V7_list2);
-        threelists.AddRange(temp_V7_list3);
 
-        float startTime2 = Time.realtimeSinceStartup;
-        //Seen_MPC_Parallel(List < V7 > InAreaMPC, Vector3 position, out List<int> SeenMPCID)
+        seen_MPC2 = new List<int>();
+        for (int i = 0; i < inarea_MPC2.Count; i++)
+        {
 
-        Seen_MPC_Parallel(threelists, transform.position, out List<int> SeenMPCID);
-        //Seen_MPC_Parallel(temp_V7_list1, transform.position, out List<int> SeenMPCID1);
-        //Seen_MPC_Parallel(temp_V7_list2, transform.position, out List<int> SeenMPCID2);
-        //Seen_MPC_Parallel(temp_V7_list3, transform.position, out List<int> SeenMPCID3);
+            Vector3 temp_direction = MPC2[inarea_MPC2[i]].Coordinates - transform.position;
+            if (Vector3.Dot(MPC2[inarea_MPC2[i]].Normal, temp_direction) < 0)
+            {
+                if (!Physics.Linecast(transform.position, MPC2[inarea_MPC2[i]].Coordinates))
+                {
+                    seen_MPC2.Add(inarea_MPC2[i]);
+                    if (Activate_MPC2)
+                    {
+                        int temp_number = inarea_MPC2[i];
+                        string temp_name = "mpc2 #" + temp_number;
+                        near_MPC2 = GameObject.Find(temp_name);
+                        near_MPC2.transform.localScale = new Vector3(1.5f, 1.5f, 1.5f);
+                    }
+                }
+            }
+        }
 
-        //float time2 = (Time.realtimeSinceStartup - startTime2) * 1000000f;
-        Debug.Log("Check 2: " + ((Time.realtimeSinceStartup - startTime2) * 1000000f) + " microsec");
-        */
+        seen_MPC3 = new List<int>();
+        for (int i = 0; i < inarea_MPC3.Count; i++)
+        {
+
+            Vector3 temp_direction = MPC3[inarea_MPC3[i]].Coordinates - transform.position;
+            if (Vector3.Dot(MPC3[inarea_MPC3[i]].Normal, temp_direction) < 0)
+            {
+                if (!Physics.Linecast(transform.position, MPC3[inarea_MPC3[i]].Coordinates))
+                {
+                    seen_MPC3.Add(inarea_MPC3[i]);
+                    if (Activate_MPC3)
+                    {
+                        int temp_number = inarea_MPC3[i];
+                        string temp_name = "mpc3 #" + temp_number;
+                        near_MPC3 = GameObject.Find(temp_name);
+                        near_MPC3.transform.localScale = new Vector3(1.5f, 1.5f, 1.5f);
+                    }
+                }
+            }
+        }
+
+
     }
 
 
 
-
-
-
-
-    [BurstCompile]
-    void Seen_MPC_Parallel(List<V7> InAreaMPC, Vector3 position, out List<int> SeenMPCID)
-    {
-        SeenMPCID = new List<int>();
-
-        var results = new NativeArray<RaycastHit>(InAreaMPC.Count, Allocator.TempJob);
-        var commands = new NativeArray<RaycastCommand>(InAreaMPC.Count, Allocator.TempJob);
-
-        for (int i = 0; i < InAreaMPC.Count; i++)
-        {
-            Vector3 direction = InAreaMPC[i].CoordNorm.Coordinates - position;
-            float distance = direction.magnitude;
-            // RaycastCommand(Vector3 from, Vector3 direction, float distance = float.MaxValue, int layerMask = -5, int maxHits = 1);
-            commands[i] = new RaycastCommand(position, direction/distance, distance, 1);
-        }
-        int minCommandsPerJob = 5;
-        var handle = RaycastCommand.ScheduleBatch(commands, results, minCommandsPerJob);
-
-        handle.Complete();
-        commands.Dispose();
-
-        for (int i = 0; i < InAreaMPC.Count; i++)
-        {
-            if (results[i].collider == null)
-            {
-                SeenMPCID.Add(InAreaMPC[i].Number);
-            }
-        }
-        
-        results.Dispose();
-    }
-
-    
-
-
-
-
-    void ToRemoveParralel(List<V7> InAraeMPCList, List<int> InAreaList, Vector3 MOVE, float MINX, float MAXX, float MINZ, float MAXZ, out List<int> ToBeRomeved)
-    {
-        // moving lists to native arrays
-        // NativeBitArray ToBeRomevedParallelBits = new NativeBitArray(MPCList.Count, Allocator.TempJob);
-        // may not work as I expect
-        NativeArray<int> ToBeRomevedParallel = new NativeArray<int>(InAraeMPCList.Count, Allocator.TempJob);
-        NativeArray<float3> MPCListParallel = new NativeArray<float3>(InAreaList.Count, Allocator.TempJob);
-        //NativeArray<int> InAreaListParallel = new NativeArray<int>(InAreaList.Count, Allocator.TempJob);
-
-        for (int i = 0; i < InAreaList.Count; i++)
-        {
-            ToBeRomevedParallel[i] = 0;
-            MPCListParallel[i] = InAraeMPCList[i].CoordNorm.Coordinates;
-            //InAreaListParallel[i] = InAreaList[i];
-        }
-
-
-        // create job instance
-        ToBeRemovedParallelExecution toBeRemovedParallelExecution = new ToBeRemovedParallelExecution
-        {
-            //InIndexArray = InAreaListParallel,
-            InMPCArray = MPCListParallel,
-            Output = ToBeRomevedParallel,
-            min_x = MINX,
-            max_x = MAXX,
-            min_z = MINZ,
-            max_z = MAXZ,
-            move = MOVE
-        };
-
-        // job scheduling
-        JobHandle jobHandle = toBeRemovedParallelExecution.Schedule(InAreaList.Count, 20);
-        jobHandle.Complete();// tell job to complete
-
-        ToBeRomeved = new List<int>();
-        for (int i = 0; i < ToBeRomevedParallel.Length; i++)
-        {
-            if (ToBeRomevedParallel[i] == 1)
-            {
-                ToBeRomeved.Add(InAreaList[i]);
-            }
-        }
-
-        ToBeRomevedParallel.Dispose();
-        MPCListParallel.Dispose();
-    }
-        
-    [BurstCompile]
-    public struct ToBeRemovedParallelExecution : IJobParallelFor
-    {
-        // parallel run performed only above this array
-        // [ReadOnly] public NativeArray<int> InIndexArray;
-        // hz
-        [ReadOnly] public NativeArray<float3> InMPCArray;
-        // this is an array where boolean yes are written
-        [WriteOnly] public NativeArray<int> Output;
-
-        [ReadOnly] public float min_x, max_x, min_z, max_z;
-        [ReadOnly] public float3 move;
-
-        public void Execute(int index)
-        {
-            if (move.x >= 0)
-            {
-                if (move.z >= 0)
-                {
-                    if ((InMPCArray[index].x < min_x) || (InMPCArray[index].z < min_z))
-                    {
-                        Output[index] = 1;
-                    }
-                }
-                else
-                {
-                    if ((InMPCArray[index].x < min_x) || (InMPCArray[index].z > max_z))
-                    {
-                        Output[index] = 1;
-                    }
-                }
-            }
-            else
-            {
-                if (move.z >= 0)
-                {
-                    if ((InMPCArray[index].x > max_x) || (InMPCArray[index].z < min_z))
-                    {
-                        Output[index] = 1;
-                    }
-                }
-                else
-                {
-                    if ((InMPCArray[index].x > max_x) || (InMPCArray[index].z > max_z))
-                    {
-                        Output[index] = 1;
-                    }
-                }
-            }
-        }
-    }
-
-    
 
 
 

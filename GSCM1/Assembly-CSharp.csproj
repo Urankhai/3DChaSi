@@ -82,6 +82,7 @@
     <Compile Include="Assets\Scripts\Scatterers_Spawning2.cs" />
     <Compile Include="Assets\Scripts\reflectionCalculation.cs" />
     <Compile Include="Assets\Transceiver_Channel.cs" />
+    <Compile Include="Assets\Transceiver_Channel_ParallelElements.cs" />
     <Compile Include="Assets\Visible_Triangles_Extraction.cs" />
     <Compile Include="Assets\Visible_Walls_Counting.cs" />
     <Compile Include="Assets\Visible_Walls_Counting_upd.cs" />

@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
+using UnityEditor.Experimental.GraphView;
+using Unity.Collections;
 
 public class LookUpTableGen : MonoBehaviour
 {
@@ -11,6 +13,15 @@ public class LookUpTableGen : MonoBehaviour
     public List<List<GeoComp>> GC2 = new List<List<GeoComp>>();
     public List<List<GeoComp>> GC3 = new List<List<GeoComp>>();
 
+    public List<GeoComp> Linear_GC2 = new List<GeoComp>();
+    public List<Vector2Int> Indexes_GC2 = new List<Vector2Int>();
+    public int MaxLengthOfSeenMPC2Lists = 0;
+
+    public List<GeoComp> Linear_GC3 = new List<GeoComp>();
+    public List<Vector2Int> Indexes_GC3 = new List<Vector2Int>();
+    public int MaxLengthOfSeenMPC3Lists = 0;
+
+    
 
     // Start is called before the first frame update
     void Start()
@@ -30,6 +41,7 @@ public class LookUpTableGen : MonoBehaviour
         // for MPC1, we do not need to have a LookUp table
         // LookUpTable for MPC2
         double angle_threshold2 = 0.1;
+        int level_start2 = 0;
         for (int i = 0; i < MPC2.Count; i++)
         {
             List<int> tempV6list = new List<int>();
@@ -51,6 +63,9 @@ public class LookUpTableGen : MonoBehaviour
                             float aod = Mathf.Acos( Vector3.Dot(temp_direction, MPC2[i].Normal) );
                             float aoa = Mathf.Acos(-Vector3.Dot(temp_direction, MPC2[ii].Normal));
                             GeoComp all_comps = new GeoComp(ii, dist, aod, aoa);
+
+                            Linear_GC2.Add(all_comps);
+
                             temp_goeComps.Add(all_comps);
 
                             if (do_we_need_third_order == "y")
@@ -71,11 +86,19 @@ public class LookUpTableGen : MonoBehaviour
             }
             LUT2.Add(tempV6list); 
             GC2.Add(temp_goeComps);
-        }
 
+            Vector2Int layer_edges = new Vector2Int(level_start2, level_start2 + temp_seen_mpc - 1);
+            Indexes_GC2.Add(layer_edges);
+            level_start2 += temp_seen_mpc;
+            if (MaxLengthOfSeenMPC2Lists < temp_seen_mpc)
+            { MaxLengthOfSeenMPC2Lists = temp_seen_mpc; }
+        }
+        
+        
 
         // LookUpTable for MPC3
         double angle_threshold3 = 0.3;
+        int level_start3 = 0;
         for (int i = 0; i < MPC3.Count; i++)
         {
             List<int> tempV6list = new List<int>();
@@ -98,6 +121,7 @@ public class LookUpTableGen : MonoBehaviour
                             float aod = Mathf.Acos(Vector3.Dot(temp_direction, MPC3[i].Normal));
                             float aoa = Mathf.Acos(-Vector3.Dot(temp_direction, MPC3[ii].Normal));
                             GeoComp all_comps = new GeoComp(ii, dist, aod, aoa);
+                            Linear_GC3.Add(all_comps);
                             temp_goeComps.Add(all_comps);
 
                             if (do_we_need_third_order == "y")
@@ -118,6 +142,12 @@ public class LookUpTableGen : MonoBehaviour
             }
             LUT3.Add(tempV6list); 
             GC3.Add(temp_goeComps);
+
+            Vector2Int layer_edges = new Vector2Int(level_start3, level_start3 + temp_seen_mpc - 1);
+            Indexes_GC3.Add(layer_edges);
+            level_start3 += temp_seen_mpc;
+            if (MaxLengthOfSeenMPC3Lists < temp_seen_mpc)
+            { MaxLengthOfSeenMPC3Lists = temp_seen_mpc; }
         } 
 
 
@@ -126,7 +156,7 @@ public class LookUpTableGen : MonoBehaviour
 }
 
 // class for geometrical components
-public class GeoComp
+public struct GeoComp
 {
     public int MPCIndex;
     public float Distance;

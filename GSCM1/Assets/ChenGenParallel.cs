@@ -74,7 +74,7 @@ public class ChenGenParallel : MonoBehaviour
     List<V6> MPC3;
 
     // defining empty elements
-    public Path3Half empty_path3Half = new Path3Half(new Vector3(0,0,0), new Vector3(0, 0, 0), new Vector3(0, 0, 0), 0f);
+    public Path3Half empty_path3Half = new Path3Half(new Vector3(0,0,0), new Vector3(0, 0, 0), new Vector3(0, 0, 0), 0, 0f);
     public Path2 empty_path2 = new Path2(new Vector3(0, 0, 0), new Vector3(0, 0, 0), new Vector3(0, 0, 0), new Vector3(0, 0, 0), 0f);
     public Path1 empty_path = new Path1(new Vector3(0, 0, 0), new Vector3(0, 0, 0), new Vector3(0, 0, 0), 0f);
 
@@ -305,6 +305,24 @@ public class ChenGenParallel : MonoBehaviour
         JobHandle TxjobHandleMPC3 = TxhalfPath3Set.Schedule(Tx_Seen_MPC3.Length, innerloopBatchCount);
         jobHandleList.Add(TxjobHandleMPC3);
 
+        JobHandle.CompleteAll(jobHandleList);
+
+        /*
+        for (int i = 0; i < RxReachableHalfPath3Array.Length; i++)
+        {
+            if (RxReachableHalfPath3Array[i].Distance > 0)
+            {
+                Rx_halfPath3Parallel.Add(RxReachableHalfPath3Array[i]);
+            }
+        }
+        */
+
+        Rx_Seen_MPC3.Dispose();
+        RxReachableHalfPath3Array.Dispose();
+        Tx_Seen_MPC3.Dispose();
+        TxReachableHalfPath3Array.Dispose();
+
+        // complete all works
         jobHandleMPC1.Complete();
         Path2Job.Complete();
 
@@ -348,22 +366,7 @@ public class ChenGenParallel : MonoBehaviour
         possiblePath2.Dispose();
         TxMPC2Array.Dispose();
 
-        JobHandle.CompleteAll(jobHandleList);
-
-        /*
-        for (int i = 0; i < RxReachableHalfPath3Array.Length; i++)
-        {
-            if (RxReachableHalfPath3Array[i].Distance > 0)
-            {
-                Rx_halfPath3Parallel.Add(RxReachableHalfPath3Array[i]);
-            }
-        }
-        */
-
-        Rx_Seen_MPC3.Dispose();
-        RxReachableHalfPath3Array.Dispose();
-        Tx_Seen_MPC3.Dispose();
-        TxReachableHalfPath3Array.Dispose();
+        
 
 
         
@@ -376,6 +379,30 @@ public class ChenGenParallel : MonoBehaviour
     }
     
     
+}
+
+public struct Path3ParallelSearch : IJobParallelFor
+{
+    [ReadOnly] public NativeArray<Path3Half> Array1;
+    [ReadOnly] public NativeArray<Path3Half> Array2;
+
+    //[WriteOnly] public NativeArray<Path3> OutputArray;
+    [WriteOnly] public NativeArray<int> OutputArray;
+    public void Execute(int index)
+    {
+        if (Array1[index].Distance > 0)
+        {
+            int number_of_seen_mpcs = 0; 
+            for (int i = 0; i < Array2.Length; i++)
+            {
+                if (Array1[index].MPC3_2ID == Array2[i].MPC3_2ID)
+                {
+                    number_of_seen_mpcs += 1;
+                }
+            }
+            OutputArray[index] = number_of_seen_mpcs;
+        }
+    }
 }
 
 [BurstCompile]
@@ -471,7 +498,7 @@ public struct HalfPath3Set : IJobParallelFor
             
             float distance2 = (SeenMPC3Table[LookUpTable3[temp_l].MPCIndex].Coordinates - SeenMPC3Table[Seen_MPC3[index]].Coordinates).magnitude;
             float distance = distance1 + distance2;
-            Path3Half temp_Path3Half = new Path3Half(Point, SeenMPC3Table[Seen_MPC3[index]].Coordinates, SeenMPC3Table[LookUpTable3[temp_l].MPCIndex].Coordinates, distance);
+            Path3Half temp_Path3Half = new Path3Half(Point, SeenMPC3Table[Seen_MPC3[index]].Coordinates, SeenMPC3Table[LookUpTable3[temp_l].MPCIndex].Coordinates, LookUpTable3[temp_l].MPCIndex, distance);
             ReachableHalfPath3[index] = temp_Path3Half;
         }
 

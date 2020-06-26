@@ -271,13 +271,15 @@ public struct Path3
     public Vector3 Point;
     public Vector3 MPC3_1;
     public Vector3 MPC3_2;
+    public int MPC3_2ID;
     public float Distance;
 
-    public Path3Half(Vector3 a, Vector3 b, Vector3 c, float distance)
+    public Path3Half(Vector3 a, Vector3 b, Vector3 c, int d, float distance)
     {
         Point = a;
         MPC3_1 = b;
         MPC3_2 = c;
+        MPC3_2ID = d;
         Distance = distance;
     }
 }

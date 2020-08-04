@@ -75,6 +75,7 @@ public class ChenGenParallel : MonoBehaviour
 
     // defining empty elements
     public Path3Half empty_path3Half = new Path3Half(new Vector3(0,0,0), new Vector3(0, 0, 0), new Vector3(0, 0, 0), 0, 0f);
+    public Path3 empty_path3 = new Path3(new Vector3(0, 0, 0), new Vector3(0, 0, 0), new Vector3(0, 0, 0), new Vector3(0, 0, 0), new Vector3(0, 0, 0), 0f);
     public Path2 empty_path2 = new Path2(new Vector3(0, 0, 0), new Vector3(0, 0, 0), new Vector3(0, 0, 0), new Vector3(0, 0, 0), 0f);
     public Path1 empty_path = new Path1(new Vector3(0, 0, 0), new Vector3(0, 0, 0), new Vector3(0, 0, 0), 0f);
 
@@ -307,15 +308,103 @@ public class ChenGenParallel : MonoBehaviour
 
         JobHandle.CompleteAll(jobHandleList);
 
-        /*
-        for (int i = 0; i < RxReachableHalfPath3Array.Length; i++)
+
+        
+
+        // storing nonempty path3s
+        List<Path3Half> TxHalfPath3 = new List<Path3Half>();
+        List<Path3Half> RxHalfPath3 = new List<Path3Half>();
+
+        // introducing a little bit of randomness to the third order of paths selection
+        int MPC3PathStep = 3; // otherwise, the sets of possible third order of paths become too big
+        for (int l = 0; l < TxReachableHalfPath3Array.Length; l += MPC3PathStep)
         {
-            if (RxReachableHalfPath3Array[i].Distance > 0)
+            if (TxReachableHalfPath3Array[l].Distance > 0)
             {
-                Rx_halfPath3Parallel.Add(RxReachableHalfPath3Array[i]);
+                TxHalfPath3.Add(TxReachableHalfPath3Array[l]);
+                /*if (MPC3_Tracer)
+                {
+                    Debug.DrawLine(TxReachableHalfPath3Array[l].Point, TxReachableHalfPath3Array[l].MPC3_1, Color.green);
+                    Debug.DrawLine(TxReachableHalfPath3Array[l].MPC3_1, TxReachableHalfPath3Array[l].MPC3_2, Color.yellow);
+                }*/
             }
         }
-        */
+        for (int l = 0; l < RxReachableHalfPath3Array.Length; l += MPC3PathStep)
+        {
+            if (RxReachableHalfPath3Array[l].Distance > 0)
+            {
+                RxHalfPath3.Add(RxReachableHalfPath3Array[l]);
+                /*if (MPC3_Tracer)
+                {
+                    Debug.DrawLine(RxReachableHalfPath3Array[l].Point, RxReachableHalfPath3Array[l].MPC3_1, Color.red);
+                    Debug.DrawLine(RxReachableHalfPath3Array[l].MPC3_1, RxReachableHalfPath3Array[l].MPC3_2, Color.blue);
+                }*/
+            }
+        }
+        //Debug.Log("Tx HalfPath3 size " + TxHalfPath3.Count + "; Rx HalfPath3 size " + RxHalfPath3.Count);
+
+
+        
+        float startTime2 = Time.realtimeSinceStartup;
+
+        NativeArray<Path3Half> RxNativeArray = new NativeArray<Path3Half>(RxHalfPath3.Count, Allocator.TempJob);
+        for (int i = 0; i < RxNativeArray.Length; i++)
+        { RxNativeArray[i] = RxHalfPath3[i]; }
+
+        NativeArray<Path3Half> TxNativeArray = new NativeArray<Path3Half>(TxHalfPath3.Count, Allocator.TempJob);
+        for (int i = 0; i < TxNativeArray.Length; i++)
+        { TxNativeArray[i] = TxHalfPath3[i]; }
+
+        NativeArray<Path3> activepath3 = new NativeArray<Path3>(RxHalfPath3.Count * MaxLengthOfSeenMPC3Lists, Allocator.TempJob);
+        //for (int i = 0; i < activepath3.Length; i++)
+        //{ activepath3[i] = empty_path3Half; }
+
+        Path3ActiveSet Rx_path3ActiveSet = new Path3ActiveSet
+        {
+            SeenMPC3Table = SeenMPC3Table,
+            InputArray = RxNativeArray,
+            CompareArray = TxNativeArray,
+            MaxListsLength = MaxLengthOfSeenMPC3Lists,
+            EmptyElement = empty_path3,
+            Output = activepath3,
+        };
+        JobHandle Jobforpath3ActiveSet = Rx_path3ActiveSet.Schedule(activepath3.Length, MaxLengthOfSeenMPC3Lists);
+
+        Jobforpath3ActiveSet.Complete();
+
+        
+        List<Path3> third_order_paths_full_parallel = new List<Path3>();
+
+        if (MPC3_Tracer)
+        {
+            int trace_count = 0; 
+            for (int l = 0; l < activepath3.Length; l++)
+            //for (int l = 0; l < 10; l++)
+            {
+                if (activepath3[l].Distance > 0)
+                {
+                    trace_count += 1;
+                    third_order_paths_full_parallel.Add(activepath3[l]);
+                    Debug.DrawLine(activepath3[l].Rx_Point, activepath3[l].MPC3_1, Color.green);
+                    Debug.DrawLine(activepath3[l].MPC3_1, activepath3[l].MPC3_2, Color.blue);
+                    Debug.DrawLine(activepath3[l].MPC3_2, activepath3[l].MPC3_3, Color.yellow);
+                    Debug.DrawLine(activepath3[l].MPC3_3, activepath3[l].Tx_Point, Color.red);
+                    //if (trace_count == 10)
+                    //{ break; }
+                }
+            }
+        }
+        Debug.Log("Number of 3rd order paths = " + third_order_paths_full_parallel.Count);
+        TxNativeArray.Dispose();
+        RxNativeArray.Dispose();
+        activepath3.Dispose();
+
+        Debug.Log("Check 2: " + ((Time.realtimeSinceStartup - startTime2) * 1000000f) + " microsec");
+
+        
+
+
+
 
         Rx_Seen_MPC3.Dispose();
         RxReachableHalfPath3Array.Dispose();
@@ -350,13 +439,13 @@ public class ChenGenParallel : MonoBehaviour
                 if (possiblePath2[l].Distance > 0)
                 {
                     second_order_paths_full_parallel.Add(possiblePath2[l]);
-                    Debug.DrawLine(possiblePath2[l].Rx_Point, possiblePath2[l].MPC2_1, Color.green);
-                    Debug.DrawLine(possiblePath2[l].MPC2_1, possiblePath2[l].MPC2_2, Color.yellow);
-                    Debug.DrawLine(possiblePath2[l].MPC2_2, possiblePath2[l].Tx_Point, Color.green);
+                    Debug.DrawLine(possiblePath2[l].Rx_Point, possiblePath2[l].MPC2_1, Color.white);
+                    Debug.DrawLine(possiblePath2[l].MPC2_1, possiblePath2[l].MPC2_2, Color.white);
+                    Debug.DrawLine(possiblePath2[l].MPC2_2, possiblePath2[l].Tx_Point, Color.white);
                 }
             }
         }
-
+        
 
         RxArray1.Dispose();
         TxArray1.Dispose();
@@ -373,10 +462,6 @@ public class ChenGenParallel : MonoBehaviour
     }
 
 
-    void CommonMPC1(List<int> List1, List<int> List2, out List<int> CommonList)
-    {
-        CommonList = List1.Intersect(List2).ToList();
-    }
     
     
 }
@@ -405,74 +490,9 @@ public struct Path3ParallelSearch : IJobParallelFor
     }
 }
 
+
+
 [BurstCompile]
-public struct Path2ParallelSearch : IJobParallelFor
-{
-    // the followings are disposed in the end of simulation
-    [ReadOnly] public NativeArray<V6> SeenMPC2Table;
-    [ReadOnly] public NativeArray<Vector2Int> LookUpTable2ID;
-    [ReadOnly] public NativeArray<GeoComp> LookUpTable2;
-
-    // the folliwings are disposed after the parallel job
-    [ReadOnly] public NativeArray<int> Rx_MPC2Array;
-    [ReadOnly] public NativeArray<int> Tx_MPC2;
-
-    // simple reads for the execution
-    [ReadOnly] public Vector3 Rx_Position;
-    [ReadOnly] public Vector3 Tx_Position;
-    [ReadOnly] public int MaxListsLength;
-
-    // the folliwings are disposed after the parallel job
-    [WriteOnly] public NativeArray<Path2> SecondOrderPaths;
-
-    public void Execute(int index)
-    {
-        V6 level1 = SeenMPC2Table[Rx_MPC2Array[index]];
-
-        float distance1 = (level1.Coordinates - Rx_Position).magnitude;
-
-        int temp_index = Mathf.FloorToInt(index / MaxListsLength);
-        int temp_i = index - temp_index * MaxListsLength;
-        if (temp_i <= LookUpTable2ID[Rx_MPC2Array[index]].y - LookUpTable2ID[Rx_MPC2Array[index]].x)
-        {
-            int temp_l = LookUpTable2ID[Rx_MPC2Array[index]].x + temp_i;
-            
-            V6 level2 = SeenMPC2Table[LookUpTable2[temp_l].MPCIndex];
-            Vector3 level2_to_level1 = level1.Coordinates - level2.Coordinates;
-            float distance2 = level2_to_level1.magnitude;
-
-            // check if level2 is seen by Tx
-            int existence_flag = 0;
-            for (int i = 0; i < Tx_MPC2.Length; i++)
-            {
-                if (LookUpTable2[temp_l].MPCIndex == Tx_MPC2[i])
-                { existence_flag = 1; break; }
-            }
-
-            if (existence_flag == 1)
-            {
-                Vector3 n_perp1 = new Vector3(-level2.Normal.z, 0, level2.Normal.x);
-                Vector3 level2_to_Tx = Tx_Position - level2.Coordinates;
-
-                Vector3 n_perp2 = new Vector3(-level1.Normal.z, 0, level1.Normal.x);
-                Vector3 Rx_to_level1 = level1.Coordinates - Rx_Position;
-
-                // check if the two vectors come from different sides of the normal
-                if ( (Vector3.Dot(n_perp1, level2_to_level1) * Vector3.Dot(n_perp1, level2_to_Tx) < 0) && (Vector3.Dot(n_perp2, level2_to_level1) * Vector3.Dot(n_perp2, Rx_to_level1) < 0))
-                {
-                    float distance3 = level2_to_Tx.magnitude;
-                    float distance = distance1 + distance2 + distance3;
-                    Path2 temp_path2 = new Path2(Rx_Position, level1.Coordinates, level2.Coordinates, Tx_Position, distance);
-                    SecondOrderPaths[index] = temp_path2;
-                }
-            }
-        }
-
-        
-    }
-}
-
-//[BurstCompile]
 public struct HalfPath3Set : IJobParallelFor
 {
     [ReadOnly] public NativeArray<V6> SeenMPC3Table;
@@ -486,20 +506,32 @@ public struct HalfPath3Set : IJobParallelFor
     [WriteOnly] public NativeArray<Path3Half> ReachableHalfPath3;
     public void Execute(int index)
     {
-
-        float distance1 = (SeenMPC3Table[Seen_MPC3[index]].Coordinates - Point).magnitude;
+        V6 level1 = SeenMPC3Table[Seen_MPC3[index]];
+        Vector3 point_to_level1 = level1.Coordinates - Point;
+        float distance1 = point_to_level1.magnitude;
 
         int temp_index = Mathf.FloorToInt(index / MaxListsLength);
         int temp_i = index - temp_index * MaxListsLength;
         if (temp_i <= LookUpTable3ID[Seen_MPC3[index]].y - LookUpTable3ID[Seen_MPC3[index]].x)
         {
+            
             int temp_l = LookUpTable3ID[Seen_MPC3[index]].x + temp_i;
+            // defining the second level of points
+            V6 level2 = SeenMPC3Table[LookUpTable3[temp_l].MPCIndex];
+            Vector3 level2_to_level1 = level1.Coordinates - level2.Coordinates;
+
+            // we define a perpendicular direction to the normal of the level1
+            Vector3 n_perp1 = new Vector3(-level1.Normal.z, 0, level1.Normal.x);
+
+            if ( (Vector3.Dot(n_perp1, point_to_level1) * Vector3.Dot(n_perp1, level2_to_level1)) < 0)
+            {
+                float distance2 = level2_to_level1.magnitude;
+                float distance = distance1 + distance2;
+                Path3Half temp_Path3Half = new Path3Half(Point, level1.Coordinates, SeenMPC3Table[LookUpTable3[temp_l].MPCIndex].Coordinates, LookUpTable3[temp_l].MPCIndex, distance);
+                ReachableHalfPath3[index] = temp_Path3Half;
+            }
 
             
-            float distance2 = (SeenMPC3Table[LookUpTable3[temp_l].MPCIndex].Coordinates - SeenMPC3Table[Seen_MPC3[index]].Coordinates).magnitude;
-            float distance = distance1 + distance2;
-            Path3Half temp_Path3Half = new Path3Half(Point, SeenMPC3Table[Seen_MPC3[index]].Coordinates, SeenMPC3Table[LookUpTable3[temp_l].MPCIndex].Coordinates, LookUpTable3[temp_l].MPCIndex, distance);
-            ReachableHalfPath3[index] = temp_Path3Half;
         }
 
     }

@@ -21,6 +21,7 @@ public class LookUpTableGen : MonoBehaviour
     public List<Vector2Int> Indexes_GC3 = new List<Vector2Int>();
     public int MaxLengthOfSeenMPC3Lists = 0;
 
+    public float MaxSeenDistanceMPC3 = 100;
     
 
     // Start is called before the first frame update
@@ -114,26 +115,31 @@ public class LookUpTableGen : MonoBehaviour
                     {
                         if (Vector3.Dot(temp_direction, MPC3[ii].Normal) < -angle_threshold3 && Vector3.Dot(temp_direction, MPC3[i].Normal) > angle_threshold3)
                         {
-                            tempV6list.Add(ii);
-                            temp_seen_mpc += 1;
+                            
 
                             float dist = (MPC3[ii].Coordinates - MPC3[i].Coordinates).magnitude;
-                            float aod = Mathf.Acos(Vector3.Dot(temp_direction, MPC3[i].Normal));
-                            float aoa = Mathf.Acos(-Vector3.Dot(temp_direction, MPC3[ii].Normal));
-                            GeoComp all_comps = new GeoComp(ii, dist, aod, aoa);
-                            Linear_GC3.Add(all_comps);
-                            temp_goeComps.Add(all_comps);
-
-                            if (do_we_need_third_order == "y")
+                            if (dist < MaxSeenDistanceMPC3)
                             {
-                                if (i == 20)
+                                tempV6list.Add(ii);
+                                temp_seen_mpc += 1;
+
+                                float aod = Mathf.Acos(Vector3.Dot(temp_direction, MPC3[i].Normal));
+                                float aoa = Mathf.Acos(-Vector3.Dot(temp_direction, MPC3[ii].Normal));
+                                GeoComp all_comps = new GeoComp(ii, dist, aod, aoa);
+                                Linear_GC3.Add(all_comps);
+                                temp_goeComps.Add(all_comps);
+
+                                if (do_we_need_third_order == "y")
                                 {
+                                    if (i == 20)
+                                    {
 
-                                    Debug.DrawLine(MPC3[i].Coordinates, MPC3[ii].Coordinates, Color.yellow, 5.0f);
+                                        Debug.DrawLine(MPC3[i].Coordinates, MPC3[ii].Coordinates, Color.yellow, 5.0f);
 
-                                    Debug.Log("The normal of seen mpc " + MPC3[ii].Normal + "; the connecting line direction " + temp_direction);
-                                    Debug.DrawLine(MPC3[ii].Coordinates, MPC3[ii].Coordinates + temp_direction * 3.0f, Color.green, 5.0f);
-                                    Debug.DrawLine(MPC3[ii].Coordinates, MPC3[ii].Coordinates + MPC3[ii].Normal * 3.0f, Color.red, 5.0f);
+                                        Debug.Log("The normal of seen mpc " + MPC3[ii].Normal + "; the connecting line direction " + temp_direction);
+                                        Debug.DrawLine(MPC3[ii].Coordinates, MPC3[ii].Coordinates + temp_direction * 3.0f, Color.green, 5.0f);
+                                        Debug.DrawLine(MPC3[ii].Coordinates, MPC3[ii].Coordinates + MPC3[ii].Normal * 3.0f, Color.red, 5.0f);
+                                    }
                                 }
                             }
                         }

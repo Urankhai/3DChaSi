@@ -68,6 +68,8 @@
     <Compile Include="Assets\ChenGenParallel.cs" />
     <Compile Include="Assets\Correcting_polygons.cs" />
     <Compile Include="Assets\LookUpTableGen.cs" />
+    <Compile Include="Assets\Path2ParallelSearch.cs" />
+    <Compile Include="Assets\Path3ActiveSet.cs" />
     <Compile Include="Assets\Scatterers_Spawning_near_Visible_Walls.cs" />
     <Compile Include="Assets\Scatterers_Spawning_near_Visible_Walls_upd.cs" />
     <Compile Include="Assets\Scatterers_Spawning_near_Visible_Walls_upd2.cs" />

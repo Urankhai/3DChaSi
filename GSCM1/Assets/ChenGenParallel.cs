@@ -7,12 +7,22 @@ using Unity.Collections;
 using Unity.Burst;
 using Unity.Mathematics;
 using System;
+//using System.Numerics;
 
 public class ChenGenParallel : MonoBehaviour
 {
-    [SerializeField] private bool useJobs;
-    List<List<GeoComp>> GlobeCom2;
-    List<List<GeoComp>> GlobeCom3;
+    //[SerializeField] private bool useJobs;
+    public double SpeedofLight = 299792458; // m/s
+    public double CarrierFrequency = 5.9*Math.Pow(10,9); // GHz
+
+    // defining the properties of .11p signals
+    public System.Numerics.Complex[] H = new System.Numerics.Complex[1024]; // Half of LTE BandWidth, instead of 2048 subcarriers
+    public NativeArray<System.Numerics.Complex> H_parallel; // creat a NativeArray that will be used to calculate channel response in parallel manner
+    public NativeArray<double> Subcarriers;
+    public double fsubcarriers = 15000; // kHz
+
+    //List<List<GeoComp>> GlobeCom2;
+    //List<List<GeoComp>> GlobeCom3;
 
     List<GeoComp> LinearGlobeCom2;
     List<Vector2Int> IndexesGlobeCom2;
@@ -33,6 +43,10 @@ public class ChenGenParallel : MonoBehaviour
     public NativeArray<Vector2Int> LookUpTable3ID;
     private void OnDisable()
     {
+        if (H_parallel.IsCreated)
+        { H_parallel.Dispose(); }
+        if (Subcarriers.IsCreated)
+        { Subcarriers.Dispose(); }
         if (SeenMPC1Table.IsCreated)
         { SeenMPC1Table.Dispose(); }
         if (SeenMPC2Table.IsCreated)
@@ -67,6 +81,18 @@ public class ChenGenParallel : MonoBehaviour
     public bool MPC2_Tracer;
     public bool MPC3_Tracer;
 
+    /// <summary>
+    ///  Data for Fourier transform
+    /// </summary>
+    double[] Y_output;
+    double[] H_output;
+    double[] X_inputValues;
+    [Space(10)]
+    [Header("CHARTS FOR DRAWING")]
+    [Space]
+    public Transform tfTime;
+    public Transform tfFreq;
+
     //int update_flag = 0;
 
     List<V6> MPC1;
@@ -79,21 +105,39 @@ public class ChenGenParallel : MonoBehaviour
     public Path2 empty_path2 = new Path2(new Vector3(0, 0, 0), new Vector3(0, 0, 0), new Vector3(0, 0, 0), new Vector3(0, 0, 0), 0f);
     public Path1 empty_path = new Path1(new Vector3(0, 0, 0), new Vector3(0, 0, 0), new Vector3(0, 0, 0), 0f);
 
+    
+
     // Start is called before the first frame update
     void Start()
     {
+        /// for Fourier transform
+        X_inputValues = new double[H.Length];
+        for (int i = 0; i < H.Length; i++)
+        { X_inputValues[i] = i; }
+
+
         // finding the script
         GameObject LookUpT = GameObject.Find("LookUpTables");
         LookUpTableGen LUT_Script = LookUpT.GetComponent<LookUpTableGen>();
 
         // this may not be used
-        GlobeCom2 = LUT_Script.GC2; // coordinates, normals, distances, departing and arriving angles
-        GlobeCom3 = LUT_Script.GC3; // coordinates, normals, distances, departing and arriving angles
+        // GlobeCom2 = LUT_Script.GC2; // coordinates, normals, distances, departing and arriving angles
+        // GlobeCom3 = LUT_Script.GC3; // coordinates, normals, distances, departing and arriving angles
 
         // reading info about MPC2
         LinearGlobeCom2 = LUT_Script.Linear_GC2;
         IndexesGlobeCom2 = LUT_Script.Indexes_GC2;
         MaxLengthOfSeenMPC2Lists = LUT_Script.MaxLengthOfSeenMPC2Lists;
+
+        // initialize the H_parallel NativeArray
+        H_parallel = new NativeArray<System.Numerics.Complex>(H.Length, Allocator.Persistent);
+        Subcarriers = new NativeArray<double>(H.Length, Allocator.Persistent);
+        for (int i = 0; i < H.Length; i++)
+        {
+            H[i] = new System.Numerics.Complex(0, 0);
+            H_parallel[i] = new System.Numerics.Complex(0, 0);
+            Subcarriers[i] = CarrierFrequency + fsubcarriers * (i + 1);
+        }
 
         // test allocation nativearrays
         LookUpTable2 = new NativeArray<GeoComp>(LinearGlobeCom2.Count, Allocator.Persistent);
@@ -162,11 +206,59 @@ public class ChenGenParallel : MonoBehaviour
 
         if (!Physics.Linecast(Tx.transform.position, Rx.transform.position))
         {
-            float LOS_distance = (Tx.transform.position - Rx.transform.position).magnitude;
             if (LOS_Tracer)
             {
                 Debug.DrawLine(Tx.transform.position, Rx.transform.position, Color.magenta);
             }
+
+            double LOS_distance = (Tx.transform.position - Rx.transform.position).magnitude;
+            //System.Numerics.Complex expLoS = new System.Numerics.Complex(Math.Cos(CarrierFrequency +) );
+            double dtLoS = LOS_distance / SpeedofLight;
+            double PathGainLoS = Math.Pow(1 / LOS_distance, 2);
+
+            var dtLoSParallel = new NativeArray<double>(1, Allocator.TempJob);
+            var PathGainLoSParallel = new NativeArray<double>(1, Allocator.TempJob);
+            for (int i = 0; i < dtLoSParallel.Length; i++)
+            {
+                dtLoSParallel[i] = dtLoS;
+                PathGainLoSParallel[i] = PathGainLoS;
+            }
+
+            ChannelParallel channelParallel = new ChannelParallel
+            {
+                TimeDelayArray = dtLoSParallel,
+                PathsGainArray = PathGainLoSParallel,
+                FrequencyArray = Subcarriers,
+
+                HH = H_parallel,
+            };
+            JobHandle jobHandleLoSChannel = channelParallel.Schedule(Subcarriers.Length, 8);
+            jobHandleLoSChannel.Complete();
+            for (int i = 0; i < H.Length; i++)
+            {
+                H[i] = H_parallel[i];
+                if (i>200 && i < 400)
+                { H[i] = H[i] * 100; }
+            }
+            
+
+            dtLoSParallel.Dispose();
+            PathGainLoSParallel.Dispose();
+
+            System.Numerics.Complex[] outputSignal_Freq = new System.Numerics.Complex[H.Length];
+            outputSignal_Freq = FastFourierTransform.FFT(H, false);
+            
+            Y_output = new double[H.Length];
+            H_output = new double[H.Length];
+            //get module of complex number
+            for (int ii = 0; ii < H.Length; ii++)
+            {
+                //Debug.Log(ii);
+                Y_output[ii] = (double)System.Numerics.Complex.Abs(outputSignal_Freq[ii]);
+                H_output[ii] = (double)System.Numerics.Complex.Abs(H[ii]);
+            }
+            Drawing.drawChart(tfTime, X_inputValues, Y_output, "time");
+            Drawing.drawChart(tfFreq, X_inputValues, H_output, "frequency");
         }
 
         ///////////////////////////////////////////////////////////////////////////////////
@@ -490,7 +582,28 @@ public struct Path3ParallelSearch : IJobParallelFor
     }
 }
 
+public struct ChannelParallel : IJobParallelFor
+{
+    [ReadOnly] public NativeArray<double> TimeDelayArray;
+    [ReadOnly] public NativeArray<double> PathsGainArray;
 
+    [ReadOnly] public NativeArray<double> FrequencyArray;
+
+    public NativeArray<System.Numerics.Complex> HH;
+
+    public void Execute(int index)
+    {
+        for (int i = 0; i < TimeDelayArray.Length; i++)
+        {
+            double cosine = Math.Cos(2 * Math.PI * FrequencyArray[index] * TimeDelayArray[i]);
+            double   sine = Math.Sin(2 * Math.PI * FrequencyArray[index] * TimeDelayArray[i]);
+            // defining exponent
+            System.Numerics.Complex exponent = new System.Numerics.Complex(cosine, sine);
+            
+            HH[index] = HH[index] + PathsGainArray[i] * exponent;
+        }
+    }
+}
 
 [BurstCompile]
 public struct HalfPath3Set : IJobParallelFor

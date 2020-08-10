@@ -67,6 +67,12 @@
     <Compile Include="Assets\ChanGen.cs" />
     <Compile Include="Assets\ChenGenParallel.cs" />
     <Compile Include="Assets\Correcting_polygons.cs" />
+    <Compile Include="Assets\FFT fast fourrier transform\Scripts\Drawing.cs" />
+    <Compile Include="Assets\FFT fast fourrier transform\Scripts\Example01_time_to_frequency.cs" />
+    <Compile Include="Assets\FFT fast fourrier transform\Scripts\Example02_filtering.cs" />
+    <Compile Include="Assets\FFT fast fourrier transform\Scripts\Example03_soundTreatment.cs" />
+    <Compile Include="Assets\FFT fast fourrier transform\Scripts\FastFourierTransform.cs" />
+    <Compile Include="Assets\FFT fast fourrier transform\Scripts\Filters.cs" />
     <Compile Include="Assets\LookUpTableGen.cs" />
     <Compile Include="Assets\Path2ParallelSearch.cs" />
     <Compile Include="Assets\Path3ActiveSet.cs" />

@@ -187,7 +187,7 @@ public class ChanGen : MonoBehaviour
                         float MPC2_distance = temp_list[temp_index].Distance;
                         float total_distance = rx_distance2MPC2 + MPC2_distance + tx_distance2MPC2;
 
-                        Path2 temp_path2 = new Path2(Rx.transform.position, MPC2[Rx_MPC2[i]].Coordinates, MPC2[Tx_MPC2[ii]].Coordinates, Tx.transform.position, total_distance);
+                        Path2 temp_path2 = new Path2(Rx.transform.position, MPC2[Rx_MPC2[i]].Coordinates, MPC2[Tx_MPC2[ii]].Coordinates, Tx.transform.position, total_distance, 0.0f);
                         second_order_paths.Add(temp_path2);
                         if (MPC2_Tracer)
                         {
@@ -217,13 +217,15 @@ public struct Path1
     public Vector3 MPC1;
     public Vector3 Tx_Point;
     public float Distance;
+    public float AngularGain;
 
-    public Path1(Vector3 a, Vector3 b, Vector3 c, float distance)
+    public Path1(Vector3 a, Vector3 b, Vector3 c, float distance, float angulargain)
     {
         Rx_Point = a;
         MPC1 = b;
         Tx_Point = c;
         Distance = distance;
+        AngularGain = angulargain;
     }
 }
 
@@ -234,14 +236,16 @@ public struct Path2
     public Vector3 MPC2_2;
     public Vector3 Tx_Point;
     public float Distance;
+    public float AngularGain;
 
-    public Path2(Vector3 a, Vector3 b, Vector3 c, Vector3 d, float distance)
+    public Path2(Vector3 a, Vector3 b, Vector3 c, Vector3 d, float distance, float angulargain)
     {
         Rx_Point = a;
         MPC2_1 = b;
         MPC2_2 = c;
         Tx_Point = d;
         Distance = distance;
+        AngularGain = angulargain;
     }
 }
 
@@ -253,8 +257,9 @@ public struct Path3
     public Vector3 MPC3_3;
     public Vector3 Tx_Point;
     public float Distance;
+    public float AngularGain;
 
-    public Path3(Vector3 a, Vector3 b, Vector3 c, Vector3 d, Vector3 e, float distance)
+    public Path3(Vector3 a, Vector3 b, Vector3 c, Vector3 d, Vector3 e, float distance, float angulargain)
     {
         Rx_Point = a;
         MPC3_1 = b;
@@ -262,6 +267,7 @@ public struct Path3
         MPC3_3 = d;
         Tx_Point = e;
         Distance = distance;
+        AngularGain = angulargain;
     }
 
 }
@@ -273,13 +279,15 @@ public struct Path3
     public Vector3 MPC3_2;
     public int MPC3_2ID;
     public float Distance;
+    public float AngularGain;
 
-    public Path3Half(Vector3 a, Vector3 b, Vector3 c, int d, float distance)
+    public Path3Half(Vector3 a, Vector3 b, Vector3 c, int d, float distance, float angulargain)
     {
         Point = a;
         MPC3_1 = b;
         MPC3_2 = c;
         MPC3_2ID = d;
         Distance = distance;
+        AngularGain = angulargain;
     }
 }

@@ -12,14 +12,18 @@ using System;
 public class ChenGenParallel : MonoBehaviour
 {
     //[SerializeField] private bool useJobs;
-    public double SpeedofLight = 299792458; // m/s
-    public double CarrierFrequency = 5.9*Math.Pow(10,9); // GHz
+    public float SpeedofLight = 299792458.0f; // m/s
+    public float CarrierFrequency = 5.9f * (float)Math.Pow(10,9); // GHz
+    public float fsubcarriers = 200000; // kHz
 
     // defining the properties of .11p signals
     public System.Numerics.Complex[] H = new System.Numerics.Complex[1024]; // Half of LTE BandWidth, instead of 2048 subcarriers
-    public NativeArray<System.Numerics.Complex> H_parallel; // creat a NativeArray that will be used to calculate channel response in parallel manner
-    public NativeArray<double> Subcarriers;
-    public double fsubcarriers = 15000; // kHz
+    public NativeArray<System.Numerics.Complex> H_LoS; // creat a NativeArray that will be used to calculate channel response in parallel manner
+    public NativeArray<System.Numerics.Complex> H_MPC1;
+    public NativeArray<System.Numerics.Complex> H_MPC2;
+    public NativeArray<System.Numerics.Complex> H_MPC3;
+    public NativeArray<float> Subcarriers;
+    
 
     //List<List<GeoComp>> GlobeCom2;
     //List<List<GeoComp>> GlobeCom3;
@@ -43,8 +47,14 @@ public class ChenGenParallel : MonoBehaviour
     public NativeArray<Vector2Int> LookUpTable3ID;
     private void OnDisable()
     {
-        if (H_parallel.IsCreated)
-        { H_parallel.Dispose(); }
+        if (H_LoS.IsCreated)
+        { H_LoS.Dispose(); }
+        if (H_MPC1.IsCreated)
+        { H_MPC1.Dispose(); }
+        if (H_MPC2.IsCreated)
+        { H_MPC2.Dispose(); }
+        if (H_MPC3.IsCreated)
+        { H_MPC3.Dispose(); }
         if (Subcarriers.IsCreated)
         { Subcarriers.Dispose(); }
         if (SeenMPC1Table.IsCreated)
@@ -100,10 +110,10 @@ public class ChenGenParallel : MonoBehaviour
     List<V6> MPC3;
 
     // defining empty elements
-    public Path3Half empty_path3Half = new Path3Half(new Vector3(0,0,0), new Vector3(0, 0, 0), new Vector3(0, 0, 0), 0, 0f);
-    public Path3 empty_path3 = new Path3(new Vector3(0, 0, 0), new Vector3(0, 0, 0), new Vector3(0, 0, 0), new Vector3(0, 0, 0), new Vector3(0, 0, 0), 0f);
-    public Path2 empty_path2 = new Path2(new Vector3(0, 0, 0), new Vector3(0, 0, 0), new Vector3(0, 0, 0), new Vector3(0, 0, 0), 0f);
-    public Path1 empty_path = new Path1(new Vector3(0, 0, 0), new Vector3(0, 0, 0), new Vector3(0, 0, 0), 0f);
+    public Path3Half empty_path3Half = new Path3Half(new Vector3(0,0,0), new Vector3(0, 0, 0), new Vector3(0, 0, 0), 0, 0f, 0f);
+    public Path3 empty_path3 = new Path3(new Vector3(0, 0, 0), new Vector3(0, 0, 0), new Vector3(0, 0, 0), new Vector3(0, 0, 0), new Vector3(0, 0, 0), 0f, 0f);
+    public Path2 empty_path2 = new Path2(new Vector3(0, 0, 0), new Vector3(0, 0, 0), new Vector3(0, 0, 0), new Vector3(0, 0, 0), 0f, 0f);
+    public Path1 empty_path = new Path1(new Vector3(0, 0, 0), new Vector3(0, 0, 0), new Vector3(0, 0, 0), 0f, 0f);
 
     
 
@@ -130,12 +140,18 @@ public class ChenGenParallel : MonoBehaviour
         MaxLengthOfSeenMPC2Lists = LUT_Script.MaxLengthOfSeenMPC2Lists;
 
         // initialize the H_parallel NativeArray
-        H_parallel = new NativeArray<System.Numerics.Complex>(H.Length, Allocator.Persistent);
-        Subcarriers = new NativeArray<double>(H.Length, Allocator.Persistent);
+        H_LoS = new NativeArray<System.Numerics.Complex>(H.Length, Allocator.Persistent); // Check if one array can be used by a number of jobs and correctly changed
+        H_MPC1 = new NativeArray<System.Numerics.Complex>(H.Length, Allocator.Persistent);
+        H_MPC2 = new NativeArray<System.Numerics.Complex>(H.Length, Allocator.Persistent);
+        H_MPC3 = new NativeArray<System.Numerics.Complex>(H.Length, Allocator.Persistent);
+        Subcarriers = new NativeArray<float>(H.Length, Allocator.Persistent);
         for (int i = 0; i < H.Length; i++)
         {
             H[i] = new System.Numerics.Complex(0, 0);
-            H_parallel[i] = new System.Numerics.Complex(0, 0);
+            H_LoS[i] = new System.Numerics.Complex(0, 0);
+            H_MPC1[i] = new System.Numerics.Complex(0, 0);
+            H_MPC2[i] = new System.Numerics.Complex(0, 0);
+            H_MPC3[i] = new System.Numerics.Complex(0, 0);
             Subcarriers[i] = CarrierFrequency + fsubcarriers * (i + 1);
         }
 
@@ -200,9 +216,24 @@ public class ChenGenParallel : MonoBehaviour
         Tx_MPC2 = Tx_Seen_MPC_Script.seen_MPC2;
         Tx_MPC3 = Tx_Seen_MPC_Script.seen_MPC3;
 
+        NativeList<JobHandle> jobHandleList_Channel = new NativeList<JobHandle>(Allocator.Temp);
+
+        /*
+        for (int i = 0; i < H.Length; i++)
+        {
+            H_LoS[i] = new System.Numerics.Complex(0, 0);
+            H_MPC1[i] = new System.Numerics.Complex(0, 0);
+            H_MPC2[i] = new System.Numerics.Complex(0, 0);
+            H_MPC3[i] = new System.Numerics.Complex(0, 0);
+        }
+        */
+
         ///////////////////////////////////////////////////////////////////////////////////
         /// LOS
         ///////////////////////////////////////////////////////////////////////////////////
+
+        float dtLoS = 0;
+        float PathGainLoS = 0;
 
         if (!Physics.Linecast(Tx.transform.position, Rx.transform.position))
         {
@@ -211,63 +242,47 @@ public class ChenGenParallel : MonoBehaviour
                 Debug.DrawLine(Tx.transform.position, Rx.transform.position, Color.magenta);
             }
 
-            double LOS_distance = (Tx.transform.position - Rx.transform.position).magnitude;
-            //System.Numerics.Complex expLoS = new System.Numerics.Complex(Math.Cos(CarrierFrequency +) );
-            double dtLoS = LOS_distance / SpeedofLight;
-            double PathGainLoS = Math.Pow(1 / LOS_distance, 2);
+            float LOS_distance = (Tx.transform.position - Rx.transform.position).magnitude;
+            //LOS_distance = 200;
+            dtLoS = LOS_distance / SpeedofLight;// + 1000/SpeedofLight;
+            PathGainLoS = (float)Math.Pow(1 / LOS_distance, 2);
 
-            var dtLoSParallel = new NativeArray<double>(1, Allocator.TempJob);
-            var PathGainLoSParallel = new NativeArray<double>(1, Allocator.TempJob);
-            for (int i = 0; i < dtLoSParallel.Length; i++)
-            {
-                dtLoSParallel[i] = dtLoS;
-                PathGainLoSParallel[i] = PathGainLoS;
-            }
-
-            ChannelParallel channelParallel = new ChannelParallel
-            {
-                TimeDelayArray = dtLoSParallel,
-                PathsGainArray = PathGainLoSParallel,
-                FrequencyArray = Subcarriers,
-
-                HH = H_parallel,
-            };
-            JobHandle jobHandleLoSChannel = channelParallel.Schedule(Subcarriers.Length, 8);
-            jobHandleLoSChannel.Complete();
-            for (int i = 0; i < H.Length; i++)
-            {
-                H[i] = H_parallel[i];
-                if (i>200 && i < 400)
-                { H[i] = H[i] * 100; }
-            }
-            
-
-            dtLoSParallel.Dispose();
-            PathGainLoSParallel.Dispose();
-
-            System.Numerics.Complex[] outputSignal_Freq = new System.Numerics.Complex[H.Length];
-            outputSignal_Freq = FastFourierTransform.FFT(H, false);
-            
-            Y_output = new double[H.Length];
-            H_output = new double[H.Length];
-            //get module of complex number
-            for (int ii = 0; ii < H.Length; ii++)
-            {
-                //Debug.Log(ii);
-                Y_output[ii] = (double)System.Numerics.Complex.Abs(outputSignal_Freq[ii]);
-                H_output[ii] = (double)System.Numerics.Complex.Abs(H[ii]);
-            }
-            Drawing.drawChart(tfTime, X_inputValues, Y_output, "time");
-            Drawing.drawChart(tfFreq, X_inputValues, H_output, "frequency");
+        }
+        
+        var dtLoSParallel = new NativeArray<float>(1, Allocator.TempJob);
+        var PathGainLoSParallel = new NativeArray<float>(1, Allocator.TempJob);
+        for (int i = 0; i < dtLoSParallel.Length; i++)
+        {
+            dtLoSParallel[i] = dtLoS;
+            PathGainLoSParallel[i] = PathGainLoS;
         }
 
+        ChannelParallel channelParallel = new ChannelParallel
+        {
+            TimeDelayArray = dtLoSParallel,
+            PathsGainArray = PathGainLoSParallel,
+            FrequencyArray = Subcarriers,
+
+            HH = H_LoS,
+        };
+        JobHandle jobHandleLoSChannel = channelParallel.Schedule(Subcarriers.Length, 8);
+        // we add the job to the list of jobs related to channel calculation in order to complete them all at once later
+        //jobHandleList_Channel.Add(jobHandleLoSChannel);
+
+        //JobHandle.CompleteAll(jobHandleList_Channel);
+        jobHandleLoSChannel.Complete();
+        dtLoSParallel.Dispose();
+        PathGainLoSParallel.Dispose();
         ///////////////////////////////////////////////////////////////////////////////////
         /// MPC1
         ///////////////////////////////////////////////////////////////////////////////////
 
         var RxArray1 = new NativeArray<int>(Rx_MPC1.Count, Allocator.TempJob);
         var TxArray1 = new NativeArray<int>(Tx_MPC1.Count, Allocator.TempJob);
+        
         var possiblePath1 = new NativeArray<Path1>(Tx_MPC1.Count, Allocator.TempJob);
+        var dtMPC1Array = new NativeArray<float>(Tx_MPC1.Count, Allocator.TempJob);
+        var PathGainMPC1 = new NativeArray<float>(Tx_MPC1.Count, Allocator.TempJob);
         for (int i = 0; i < Rx_MPC1.Count; i++)
         { RxArray1[i] = Rx_MPC1[i]; }
         for (int i = 0; i < Tx_MPC1.Count; i++)
@@ -277,6 +292,7 @@ public class ChenGenParallel : MonoBehaviour
         }
         CommonMPC1Parallel commonMPC1Parallel = new CommonMPC1Parallel
         {
+            Speed_of_Light = SpeedofLight,
             MPC1 = SeenMPC1Table,
             Array1 = RxArray1,
             Array2 = TxArray1,
@@ -284,19 +300,57 @@ public class ChenGenParallel : MonoBehaviour
             Tx_Point = Tx.transform.position,
 
             Output = possiblePath1,
+            OutputDelays = dtMPC1Array,
+            OutputAmplitudes = PathGainMPC1,
         };
         JobHandle jobHandleMPC1 = commonMPC1Parallel.Schedule(TxArray1.Length, 2);
-        // this can be completed later on
+        jobHandleMPC1.Complete();
+
+        // transition from NativeArrays to Lists
+        List<Path1> first_order_paths_full_parallel = new List<Path1>();
+        if (MPC1_Tracer)
+        {
+            for (int i = 0; i < possiblePath1.Length; i++)
+            {
+                if (possiblePath1[i].Distance > 0)
+                {
+                    first_order_paths_full_parallel.Add(possiblePath1[i]);
+                    Debug.DrawLine(possiblePath1[i].Rx_Point, possiblePath1[i].MPC1, Color.cyan);
+                    Debug.DrawLine(possiblePath1[i].Tx_Point, possiblePath1[i].MPC1, Color.cyan);
+                }
+            }
+        }
+
         
 
+        // channel calculation
+        ChannelParallel channelParallelMPC1 = new ChannelParallel
+        {
+            TimeDelayArray = dtMPC1Array,
+            PathsGainArray = PathGainMPC1,
+            FrequencyArray = Subcarriers,
 
+            HH = H_MPC1,
+        };
+        JobHandle jobHandleChannelMPC1 = channelParallelMPC1.Schedule(Subcarriers.Length, 8, jobHandleMPC1);
+        // we add the job to the list of jobs related to channel calculation in order to complete them all at once later
+        //jobHandleList_Channel.Add(jobHandleChannelMPC1);
+        jobHandleChannelMPC1.Complete();
 
+        RxArray1.Dispose();
+        TxArray1.Dispose();
+        possiblePath1.Dispose();
+        dtMPC1Array.Dispose();
+        PathGainMPC1.Dispose();
         ///////////////////////////////////////////////////////////////////////////////////
         /// MPC2 Parallel
         ///////////////////////////////////////////////////////////////////////////////////
-        
+
         var level2MPC2 = new NativeArray<int>(Rx_MPC2.Count * MaxLengthOfSeenMPC2Lists, Allocator.TempJob);
         var possiblePath2 = new NativeArray<Path2>(Rx_MPC2.Count * MaxLengthOfSeenMPC2Lists, Allocator.TempJob);
+        var dtArrayMPC2 = new NativeArray<float>(Rx_MPC2.Count * MaxLengthOfSeenMPC2Lists, Allocator.TempJob);
+        var PathGainMPC2 = new NativeArray<float>(Rx_MPC2.Count * MaxLengthOfSeenMPC2Lists, Allocator.TempJob);
+
         for (int l = 0; l < Rx_MPC2.Count * MaxLengthOfSeenMPC2Lists; l++)
         {
             level2MPC2[l] = Rx_MPC2[Mathf.FloorToInt(l / MaxLengthOfSeenMPC2Lists)];
@@ -321,25 +375,64 @@ public class ChenGenParallel : MonoBehaviour
             Rx_Position = Rx.transform.position,
             Tx_Position = Tx.transform.position,
             MaxListsLength = MaxLengthOfSeenMPC2Lists,
+            Speed_of_Light = SpeedofLight,
 
             SecondOrderPaths = possiblePath2,
+            OutputDelays = dtArrayMPC2,
+            OutputAmplitudes = PathGainMPC2,
         };
         // create a job handle list
-        JobHandle Path2Job = path2ParallelSearch.Schedule(level2MPC2.Length, MaxLengthOfSeenMPC2Lists);
+        JobHandle jobHandleMPC2 = path2ParallelSearch.Schedule(level2MPC2.Length, MaxLengthOfSeenMPC2Lists, jobHandleMPC1);
+        
+        jobHandleMPC2.Complete();
 
+
+
+        /// MPC2
+        List<Path2> second_order_paths_full_parallel = new List<Path2>();
+
+        if (MPC2_Tracer)
+        {
+            for (int l = 0; l < possiblePath2.Length; l++)
+            {
+                if (possiblePath2[l].Distance > 0)
+                {
+                    second_order_paths_full_parallel.Add(possiblePath2[l]);
+                    Debug.DrawLine(possiblePath2[l].Rx_Point, possiblePath2[l].MPC2_1, Color.white);
+                    Debug.DrawLine(possiblePath2[l].MPC2_1, possiblePath2[l].MPC2_2, Color.white);
+                    Debug.DrawLine(possiblePath2[l].MPC2_2, possiblePath2[l].Tx_Point, Color.white);
+                }
+            }
+        }
+
+        // channel calculation
+        ChannelParallel channelParallelMPC2 = new ChannelParallel
+        {
+            TimeDelayArray = dtArrayMPC2,
+            PathsGainArray = PathGainMPC2,
+            FrequencyArray = Subcarriers,
+
+            HH = H_MPC2,
+        };
+        JobHandle jobHandleChannelMPC2 = channelParallelMPC2.Schedule(Subcarriers.Length, 8, jobHandleMPC2);
+        // we add the job to the list of jobs related to channel calculation in order to complete them all at once later
+        //jobHandleList_Channel.Add(jobHandleChannelMPC1);
+        jobHandleChannelMPC2.Complete();
+
+        level2MPC2.Dispose();
+        possiblePath2.Dispose();
+        TxMPC2Array.Dispose();
+        dtArrayMPC2.Dispose();
+        PathGainMPC2.Dispose();
 
         ///////////////////////////////////////////////////////////////////////////////////
         /// MPC3
         ///////////////////////////////////////////////////////////////////////////////////
 
 
-
-
         // define how many elements should be processed in a single core
         int innerloopBatchCount = MaxLengthOfSeenMPC3Lists;
         
-        // List<Path3Half> Rx_halfPath3Parallel = new List<Path3Half>();
-        // List<Path3Half> Tx_halfPath3Parallel = new List<Path3Half>();
         Vector3 Rx_Point = Rx.transform.position;
         Vector3 Tx_Point = Tx.transform.position;
 
@@ -376,7 +469,7 @@ public class ChenGenParallel : MonoBehaviour
         // create a job handle list
         NativeList<JobHandle> jobHandleList = new NativeList<JobHandle>(Allocator.Temp);
         
-        JobHandle RxjobHandleMPC3 = RxhalfPath3Set.Schedule(Rx_Seen_MPC3.Length, innerloopBatchCount);
+        JobHandle RxjobHandleMPC3 = RxhalfPath3Set.Schedule(Rx_Seen_MPC3.Length, innerloopBatchCount, jobHandleMPC2);
         jobHandleList.Add(RxjobHandleMPC3);
 
         HalfPath3Set TxhalfPath3Set = new HalfPath3Set
@@ -395,7 +488,7 @@ public class ChenGenParallel : MonoBehaviour
 
         };
 
-        JobHandle TxjobHandleMPC3 = TxhalfPath3Set.Schedule(Tx_Seen_MPC3.Length, innerloopBatchCount);
+        JobHandle TxjobHandleMPC3 = TxhalfPath3Set.Schedule(Tx_Seen_MPC3.Length, innerloopBatchCount, jobHandleMPC2);
         jobHandleList.Add(TxjobHandleMPC3);
 
         JobHandle.CompleteAll(jobHandleList);
@@ -414,11 +507,6 @@ public class ChenGenParallel : MonoBehaviour
             if (TxReachableHalfPath3Array[l].Distance > 0)
             {
                 TxHalfPath3.Add(TxReachableHalfPath3Array[l]);
-                /*if (MPC3_Tracer)
-                {
-                    Debug.DrawLine(TxReachableHalfPath3Array[l].Point, TxReachableHalfPath3Array[l].MPC3_1, Color.green);
-                    Debug.DrawLine(TxReachableHalfPath3Array[l].MPC3_1, TxReachableHalfPath3Array[l].MPC3_2, Color.yellow);
-                }*/
             }
         }
         for (int l = 0; l < RxReachableHalfPath3Array.Length; l += MPC3PathStep)
@@ -426,18 +514,13 @@ public class ChenGenParallel : MonoBehaviour
             if (RxReachableHalfPath3Array[l].Distance > 0)
             {
                 RxHalfPath3.Add(RxReachableHalfPath3Array[l]);
-                /*if (MPC3_Tracer)
-                {
-                    Debug.DrawLine(RxReachableHalfPath3Array[l].Point, RxReachableHalfPath3Array[l].MPC3_1, Color.red);
-                    Debug.DrawLine(RxReachableHalfPath3Array[l].MPC3_1, RxReachableHalfPath3Array[l].MPC3_2, Color.blue);
-                }*/
             }
         }
-        //Debug.Log("Tx HalfPath3 size " + TxHalfPath3.Count + "; Rx HalfPath3 size " + RxHalfPath3.Count);
+        
 
 
         
-        float startTime2 = Time.realtimeSinceStartup;
+        //float startTime2 = Time.realtimeSinceStartup;
 
         NativeArray<Path3Half> RxNativeArray = new NativeArray<Path3Half>(RxHalfPath3.Count, Allocator.TempJob);
         for (int i = 0; i < RxNativeArray.Length; i++)
@@ -448,8 +531,8 @@ public class ChenGenParallel : MonoBehaviour
         { TxNativeArray[i] = TxHalfPath3[i]; }
 
         NativeArray<Path3> activepath3 = new NativeArray<Path3>(RxHalfPath3.Count * MaxLengthOfSeenMPC3Lists, Allocator.TempJob);
-        //for (int i = 0; i < activepath3.Length; i++)
-        //{ activepath3[i] = empty_path3Half; }
+        NativeArray<float> dtArrayMPC3 = new NativeArray<float>(RxHalfPath3.Count * MaxLengthOfSeenMPC3Lists, Allocator.TempJob);
+        NativeArray<float> PathGainMPC3 = new NativeArray<float>(RxHalfPath3.Count * MaxLengthOfSeenMPC3Lists, Allocator.TempJob);
 
         Path3ActiveSet Rx_path3ActiveSet = new Path3ActiveSet
         {
@@ -458,13 +541,31 @@ public class ChenGenParallel : MonoBehaviour
             CompareArray = TxNativeArray,
             MaxListsLength = MaxLengthOfSeenMPC3Lists,
             EmptyElement = empty_path3,
+            Speed_of_Light = SpeedofLight,
+
             Output = activepath3,
+            OutputDelays = dtArrayMPC3,
+            OutputAmplitudes = PathGainMPC3
+
         };
-        JobHandle Jobforpath3ActiveSet = Rx_path3ActiveSet.Schedule(activepath3.Length, MaxLengthOfSeenMPC3Lists);
+        JobHandle Jobforpath3ActiveSet = Rx_path3ActiveSet.Schedule(activepath3.Length, MaxLengthOfSeenMPC3Lists, TxjobHandleMPC3);
 
         Jobforpath3ActiveSet.Complete();
 
-        
+        // channel calculation
+        ChannelParallel channelParallelMPC3 = new ChannelParallel
+        {
+            TimeDelayArray = dtArrayMPC3,
+            PathsGainArray = PathGainMPC3,
+            FrequencyArray = Subcarriers,
+
+            HH = H_MPC3,
+        };
+        JobHandle jobHandleChannelMPC3 = channelParallelMPC3.Schedule(Subcarriers.Length, 8, Jobforpath3ActiveSet);
+        // we add the job to the list of jobs related to channel calculation in order to complete them all at once later
+        //jobHandleList_Channel.Add(jobHandleChannelMPC1);
+        jobHandleChannelMPC3.Complete();
+
         List<Path3> third_order_paths_full_parallel = new List<Path3>();
 
         if (MPC3_Tracer)
@@ -486,12 +587,14 @@ public class ChenGenParallel : MonoBehaviour
                 }
             }
         }
-        Debug.Log("Number of 3rd order paths = " + third_order_paths_full_parallel.Count);
+        //Debug.Log("Number of 3rd order paths = " + third_order_paths_full_parallel.Count);
         TxNativeArray.Dispose();
         RxNativeArray.Dispose();
         activepath3.Dispose();
+        dtArrayMPC3.Dispose();
+        PathGainMPC3.Dispose();
 
-        Debug.Log("Check 2: " + ((Time.realtimeSinceStartup - startTime2) * 1000000f) + " microsec");
+        //Debug.Log("Check 2: " + ((Time.realtimeSinceStartup - startTime2) * 1000000f) + " microsec");
 
         
 
@@ -503,49 +606,66 @@ public class ChenGenParallel : MonoBehaviour
         Tx_Seen_MPC3.Dispose();
         TxReachableHalfPath3Array.Dispose();
 
-        // complete all works
-        jobHandleMPC1.Complete();
-        Path2Job.Complete();
+        ///////////////////////////////////////////////////////////////////////////////////
+        /// complete the works
+        ///////////////////////////////////////////////////////////////////////////////////
+        /// LoS
+        // this part should be moved to the end at least after the completion of the list of the works
+        //jobHandleList_Channel.Complete();
 
-        // transition from NativeArrays to Lists
-        List<Path1> first_order_paths_full_parallel = new List<Path1>();
-        if (MPC1_Tracer)
+        //double asd = System.Numerics.Complex.Abs( H_MPC2[0]);
+        for (int i = 0; i < H.Length; i++)
         {
-            for (int i = 0; i < possiblePath1.Length; i++)
-            {
-                if (possiblePath1[i].Distance > 0)
-                {
-                    first_order_paths_full_parallel.Add(possiblePath1[i]);
-                    Debug.DrawLine(possiblePath1[i].Rx_Point, possiblePath1[i].MPC1, Color.cyan);
-                    Debug.DrawLine(possiblePath1[i].Tx_Point, possiblePath1[i].MPC1, Color.cyan);
-                }
-            }
+
+            //H[i] = H_LoS[i];
+            //H[i] = H_MPC1[i];
+            //H[i] = H_MPC2[i];
+
+            //H[i] = H_LoS[i] + H_MPC1[i];
+            H[i] = H_LoS[i] + H_MPC1[i] + H_MPC2[i] + H_MPC3[i];
+            //H[i] = H_MPC3[i];
+
+            // zeroing all the inputs
+            H_LoS[i] = new System.Numerics.Complex(0,0);
+            H_MPC1[i] = new System.Numerics.Complex(0, 0);
+            H_MPC2[i] = new System.Numerics.Complex(0, 0);
+            H_MPC3[i] = new System.Numerics.Complex(0, 0);
         }
 
-        List<Path2> second_order_paths_full_parallel = new List<Path2>();
 
-        if (MPC2_Tracer)
-        {
-            for (int l = 0; l < possiblePath2.Length; l++)
-            {
-                if (possiblePath2[l].Distance > 0)
-                {
-                    second_order_paths_full_parallel.Add(possiblePath2[l]);
-                    Debug.DrawLine(possiblePath2[l].Rx_Point, possiblePath2[l].MPC2_1, Color.white);
-                    Debug.DrawLine(possiblePath2[l].MPC2_1, possiblePath2[l].MPC2_2, Color.white);
-                    Debug.DrawLine(possiblePath2[l].MPC2_2, possiblePath2[l].Tx_Point, Color.white);
-                }
-            }
-        }
         
 
-        RxArray1.Dispose();
-        TxArray1.Dispose();
-        possiblePath1.Dispose();
+        
+        System.Numerics.Complex[] outputSignal_Freq = FastFourierTransform.FFT(H, false);
 
-        level2MPC2.Dispose();
-        possiblePath2.Dispose();
-        TxMPC2Array.Dispose();
+        Y_output = new double[H.Length];
+        H_output = new double[H.Length];
+        //get module of complex number
+        for (int ii = 0; ii < H.Length; ii++)
+        {
+            //Debug.Log(ii);
+            if (System.Numerics.Complex.Abs(outputSignal_Freq[ii]) > 0)
+            {
+                Y_output[ii] = 10 * Math.Log10(System.Numerics.Complex.Abs(outputSignal_Freq[ii]));// + 0.0000000000001);
+                H_output[ii] = 10 * Math.Log10(System.Numerics.Complex.Abs(H[ii]));// + 0.0000000000001);
+            }
+            else 
+            {
+                Y_output[ii] = 10 * Math.Log10(System.Numerics.Complex.Abs(outputSignal_Freq[ii]) + 0.0000000000001);
+                H_output[ii] = 10 * Math.Log10(System.Numerics.Complex.Abs(H[ii]) + 0.0000000000001);
+            }
+            //Y_output[ii] = (System.Numerics.Complex.Abs(outputSignal_Freq[ii]) + 0.0000000000001);
+            //H_output[ii] = (System.Numerics.Complex.Abs(H[ii]) + 0.0000000000001);
+            //if (ii < 50)
+            //{ H_output[ii] = 0.1; }
+            //H[ii] = new System.Numerics.Complex(0, 0);
+        }
+        Drawing.drawChart(tfTime, X_inputValues, Y_output, "time");
+        Drawing.drawChart(tfFreq, X_inputValues, H_output, "frequency");
+        
+
+        
+        
 
         
 
@@ -558,50 +678,45 @@ public class ChenGenParallel : MonoBehaviour
     
 }
 
-public struct Path3ParallelSearch : IJobParallelFor
-{
-    [ReadOnly] public NativeArray<Path3Half> Array1;
-    [ReadOnly] public NativeArray<Path3Half> Array2;
 
-    //[WriteOnly] public NativeArray<Path3> OutputArray;
-    [WriteOnly] public NativeArray<int> OutputArray;
-    public void Execute(int index)
-    {
-        if (Array1[index].Distance > 0)
-        {
-            int number_of_seen_mpcs = 0; 
-            for (int i = 0; i < Array2.Length; i++)
-            {
-                if (Array1[index].MPC3_2ID == Array2[i].MPC3_2ID)
-                {
-                    number_of_seen_mpcs += 1;
-                }
-            }
-            OutputArray[index] = number_of_seen_mpcs;
-        }
-    }
-}
-
+[BurstCompile]
 public struct ChannelParallel : IJobParallelFor
 {
-    [ReadOnly] public NativeArray<double> TimeDelayArray;
-    [ReadOnly] public NativeArray<double> PathsGainArray;
+    [ReadOnly] public NativeArray<float> TimeDelayArray;
+    [ReadOnly] public NativeArray<float> PathsGainArray;
 
-    [ReadOnly] public NativeArray<double> FrequencyArray;
+    [ReadOnly] public NativeArray<float> FrequencyArray;
 
-    public NativeArray<System.Numerics.Complex> HH;
+    [WriteOnly] public NativeArray<System.Numerics.Complex> HH;
 
     public void Execute(int index)
     {
-        for (int i = 0; i < TimeDelayArray.Length; i++)
+        System.Numerics.Complex temp_channel = new System.Numerics.Complex(0, 0);
+        if (TimeDelayArray.Length == 1)
         {
-            double cosine = Math.Cos(2 * Math.PI * FrequencyArray[index] * TimeDelayArray[i]);
-            double   sine = Math.Sin(2 * Math.PI * FrequencyArray[index] * TimeDelayArray[i]);
+            double cosine = Math.Cos(2 * Math.PI * FrequencyArray[index] * TimeDelayArray[0]);
+            double sine = Math.Sin(2 * Math.PI * FrequencyArray[index] * TimeDelayArray[0]);
             // defining exponent
             System.Numerics.Complex exponent = new System.Numerics.Complex(cosine, sine);
-            
-            HH[index] = HH[index] + PathsGainArray[i] * exponent;
+
+            temp_channel = PathsGainArray[0] * exponent;
         }
+        else
+        {
+            for (int i = 0; i < TimeDelayArray.Length; i++)
+            {
+                if (TimeDelayArray[i] > 0)
+                {
+                    double cosine = Math.Cos(2 * Math.PI * FrequencyArray[index] * TimeDelayArray[i]);
+                    double sine = Math.Sin(2 * Math.PI * FrequencyArray[index] * TimeDelayArray[i]);
+                    // defining exponent
+                    System.Numerics.Complex exponent = new System.Numerics.Complex(cosine, sine);
+
+                    temp_channel = temp_channel + PathsGainArray[i] * exponent;
+                }
+            }
+        }
+        HH[index] = temp_channel;
     }
 }
 
@@ -620,8 +735,8 @@ public struct HalfPath3Set : IJobParallelFor
     public void Execute(int index)
     {
         V6 level1 = SeenMPC3Table[Seen_MPC3[index]];
-        Vector3 point_to_level1 = level1.Coordinates - Point;
-        float distance1 = point_to_level1.magnitude;
+        Vector3 point_to_level1 = (level1.Coordinates - Point).normalized;
+        float distance1 = (level1.Coordinates - Point).magnitude;
 
         int temp_index = Mathf.FloorToInt(index / MaxListsLength);
         int temp_i = index - temp_index * MaxListsLength;
@@ -631,16 +746,32 @@ public struct HalfPath3Set : IJobParallelFor
             int temp_l = LookUpTable3ID[Seen_MPC3[index]].x + temp_i;
             // defining the second level of points
             V6 level2 = SeenMPC3Table[LookUpTable3[temp_l].MPCIndex];
-            Vector3 level2_to_level1 = level1.Coordinates - level2.Coordinates;
+            Vector3 level2_to_level1 = (level1.Coordinates - level2.Coordinates).normalized;
 
             // we define a perpendicular direction to the normal of the level1
-            Vector3 n_perp1 = new Vector3(-level1.Normal.z, 0, level1.Normal.x);
+            Vector3 normal1 = level1.Normal;
+            Vector3 n_perp1 = new Vector3(-normal1.z, 0, normal1.x);
 
             if ( (Vector3.Dot(n_perp1, point_to_level1) * Vector3.Dot(n_perp1, level2_to_level1)) < 0)
             {
-                float distance2 = level2_to_level1.magnitude;
+                double theta1 = Math.Acos(Vector3.Dot(normal1, -point_to_level1));
+                double theta2 = Math.Acos(Vector3.Dot(normal1, -level2_to_level1));
+                int I1, I2, I3;
+                if (theta1 + theta2 < 0.35)
+                { I1 = 0; }
+                else { I1 = 1; }
+                if (theta1 < 1.22)
+                { I2 = 0; }
+                else { I2 = 1; }
+                if (theta2 < 1.22)
+                { I3 = 0; }
+                else { I3 = 1; }
+
+                float angular_gain = (float)Math.Exp(-12 * ((theta1 + theta2 - 0.35) * I1 + (theta1 - 1.22) * I2 + (theta2 - 1.22) * I3));
+
+                float distance2 = (level1.Coordinates - level2.Coordinates).magnitude;
                 float distance = distance1 + distance2;
-                Path3Half temp_Path3Half = new Path3Half(Point, level1.Coordinates, SeenMPC3Table[LookUpTable3[temp_l].MPCIndex].Coordinates, LookUpTable3[temp_l].MPCIndex, distance);
+                Path3Half temp_Path3Half = new Path3Half(Point, level1.Coordinates, SeenMPC3Table[LookUpTable3[temp_l].MPCIndex].Coordinates, LookUpTable3[temp_l].MPCIndex, distance, angular_gain);
                 ReachableHalfPath3[index] = temp_Path3Half;
             }
 
@@ -649,55 +780,6 @@ public struct HalfPath3Set : IJobParallelFor
 
     }
 }
-
-[BurstCompile]
-public struct LightPath2ParallelSearch : IJobParallelFor
-{
-    [ReadOnly] public NativeArray<V6> MPC2;
-    [ReadOnly] public NativeArray<GeoComp> temp_array;
-    [ReadOnly] public NativeArray<int> Tx_MPC2_Array;
-    
-    [ReadOnly] public V6 temp_Rx_MPC2;
-    [ReadOnly] public int Rx_MPC2_Value;
-    [ReadOnly] public Vector3 RxPosition, TxPosition;
-
-    [WriteOnly] public NativeArray<Path2> SecondOrderPaths;
-    public void Execute(int index)
-    {
-        int flag_existence = 0;
-        for (int i = 0; i < temp_array.Length; i++)
-        {
-            if (temp_array[i].MPCIndex == Tx_MPC2_Array[index])
-            { flag_existence = 1; break; }
-        }
-        if (flag_existence == 1)
-        {
-            // defining peprendicular to the considered normal that is parallel to the ground. 
-            V6 temp_Tx_MPC2 = MPC2[Tx_MPC2_Array[index]];
-
-            Vector3 n_perp1 = new Vector3(-temp_Rx_MPC2.Normal.z, 0, temp_Rx_MPC2.Normal.x);
-            Vector3 Rx_dir1 = (RxPosition - temp_Rx_MPC2.Coordinates).normalized;
-            Vector3 RT = (temp_Tx_MPC2.Coordinates - temp_Rx_MPC2.Coordinates).normalized;
-
-            Vector3 n_perp2 = new Vector3(-temp_Tx_MPC2.Normal.z, 0, temp_Tx_MPC2.Normal.x);
-            Vector3 Tx_dir2 = (TxPosition - temp_Tx_MPC2.Coordinates).normalized;
-            Vector3 TR = (temp_Rx_MPC2.Coordinates - temp_Tx_MPC2.Coordinates).normalized;
-
-            if ((Vector3.Dot(n_perp1, Rx_dir1) * Vector3.Dot(n_perp1, RT) < 0) && (Vector3.Dot(n_perp2, Tx_dir2) * Vector3.Dot(n_perp2, TR) < 0))
-            {
-                float rx_distance2MPC2 = (RxPosition - MPC2[Rx_MPC2_Value].Coordinates).magnitude;
-                float tx_distance2MPC2 = (TxPosition - MPC2[Tx_MPC2_Array[index]].Coordinates).magnitude;
-                
-                float MPC2_distance = (MPC2[Rx_MPC2_Value].Coordinates - MPC2[Tx_MPC2_Array[index]].Coordinates).magnitude;
-                float total_distance = rx_distance2MPC2 + MPC2_distance + tx_distance2MPC2;
-
-                Path2 temp_path2 = new Path2(RxPosition, MPC2[Rx_MPC2_Value].Coordinates, MPC2[Tx_MPC2_Array[index]].Coordinates, TxPosition, total_distance);
-                SecondOrderPaths[index] = temp_path2;
-            }
-        }
-    }
-}
-
 
 
 
@@ -711,26 +793,52 @@ public struct CommonMPC1Parallel : IJobParallelFor
     [ReadOnly] public NativeArray<V6> MPC1;
 
     [ReadOnly] public Vector3 Rx_Point, Tx_Point;
+    [ReadOnly] public float Speed_of_Light;
     // this is an array where boolean yes are written
     [WriteOnly] public NativeArray<Path1> Output;
+    [WriteOnly] public NativeArray<float> OutputDelays;
+    [WriteOnly] public NativeArray<float> OutputAmplitudes;
 
     public void Execute(int index)
     {
+        OutputDelays[index] = 0;
+        OutputAmplitudes[index] = 0;
         for (int i = 0; i < Array1.Length; i++)
         {
             if (Array2[index] == Array1[i])
             {
-                Vector3 n_perp = new Vector3(-MPC1[Array2[index]].Normal.z, 0, MPC1[Array2[index]].Normal.x);
+                Vector3 temp_normal = MPC1[Array2[index]].Normal;
+                Vector3 n_perp = new Vector3(-temp_normal.z, 0, temp_normal.x);
                 Vector3 rx_direction = (Rx_Point - MPC1[Array2[index]].Coordinates).normalized;
                 Vector3 tx_direction = (Tx_Point - MPC1[Array2[index]].Coordinates).normalized;
 
                 if ((Vector3.Dot(n_perp, rx_direction) * Vector3.Dot(n_perp, tx_direction)) < 0)
                 {
+                    // we mimic that we calculate the angles
+                    double theta1 = Math.Acos(Vector3.Dot(temp_normal, rx_direction));
+                    double theta2 = Math.Acos(Vector3.Dot(temp_normal, tx_direction));
+                    
+                    int I1, I2, I3;
+                    if (theta1 + theta2 < 0.35)
+                    { I1 = 0; } 
+                    else  { I1 = 1; }
+                    if (theta1 < 1.22)
+                    { I2 = 0; }
+                    else { I2 = 1; }
+                    if (theta2 < 1.22)
+                    { I3 = 0; }
+                    else { I3 = 1; }
+
+                    float angular_gain = (float)Math.Exp(  -12*( (theta1 + theta2 - 0.35)*I1 + (theta1 - 1.22)*I2 + (theta2 - 1.22)*I3 )  );
+
+
                     float rx_distance = (Rx_Point - MPC1[Array2[index]].Coordinates).magnitude;
                     float tx_distance = (Tx_Point - MPC1[Array2[index]].Coordinates).magnitude;
                     float distance = rx_distance + tx_distance;
-                    Path1 temp_Path1 = new Path1(Rx_Point, MPC1[Array2[index]].Coordinates, Tx_Point, distance);
+                    Path1 temp_Path1 = new Path1(Rx_Point, MPC1[Array2[index]].Coordinates, Tx_Point, distance, angular_gain);
                     Output[index] = temp_Path1;
+                    OutputDelays[index] = distance / Speed_of_Light;
+                    OutputAmplitudes[index] = angular_gain * (float)Math.Pow(1 / distance, 2);
                 }
                 break;
             }

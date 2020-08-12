@@ -5830,15 +5830,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 04fe68716782c354089b1b443b8caeaa, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  SpeedofLight: 299792458
-  CarrierFrequency: 5900000000
-  fsubcarriers: 15000
+  SpeedofLight: 299792450
+  CarrierFrequency: 5.9e+9
+  fsubcarriers: 200000
   MaxLengthOfSeenMPC2Lists: 0
   MaxLengthOfSeenMPC3Lists: 0
   Rx: {fileID: 1533634962}
   Tx: {fileID: 1107463538}
   LOS_Tracer: 1
-  MPC1_Tracer: 0
+  MPC1_Tracer: 1
   MPC2_Tracer: 1
   MPC3_Tracer: 1
   tfTime: {fileID: 1144777040}

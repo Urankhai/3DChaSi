@@ -23,14 +23,15 @@ public static class Drawing
         //do not resize array
         if (type=="time")
         {
-                                  
+            X_inputValues = ArrayResize(X_inputValues, (int)X_inputValues.Length / 4);
+            Y_inputValues = ArrayResize(Y_inputValues, (int)Y_inputValues.Length / 4);
 
         }
         //resize array
         else if(type=="frequency")
         {
-            X_inputValues=ArrayResize(X_inputValues, (int)X_inputValues.Length/2);
-            Y_inputValues=ArrayResize(Y_inputValues, (int)Y_inputValues.Length/2);
+            //X_inputValues=ArrayResize(X_inputValues, (int)X_inputValues.Length/2);
+            //Y_inputValues=ArrayResize(Y_inputValues, (int)Y_inputValues.Length/2);
         }
 
         linR.positionCount = X_inputValues.Length;
@@ -63,7 +64,7 @@ public static class Drawing
     {
 
         double[] temp = new double[Size];
-        for (int c = 1; c < Mathf.Min(Size, a.Length); c++)
+        for (int c = 0; c < Mathf.Min(Size, a.Length); c++)
         {
             temp[c] = a[c];
         }

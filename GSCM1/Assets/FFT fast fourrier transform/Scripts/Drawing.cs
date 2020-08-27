@@ -38,8 +38,8 @@ public static class Drawing
 
         double max_X = FastFourierTransform.MaxD(X_inputValues);
         double min_X = FastFourierTransform.MinD(X_inputValues);
-        double max_Y = FastFourierTransform.MaxD(Y_inputValues);
-        double min_Y = FastFourierTransform.MinD(Y_inputValues);
+        double max_Y = 30;// FastFourierTransform.MaxD(Y_inputValues);
+        double min_Y = -120;// FastFourierTransform.MinD(Y_inputValues);
 
         //drawing factors
         double factorA_X = (x0 + a / 2 - (x0 - a / 2)) / (max_X - min_X + 0.01f);

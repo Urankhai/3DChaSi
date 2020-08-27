@@ -104,7 +104,7 @@ public struct Path2ParallelSearch : IJobParallelFor
                     Path2 temp_path2 = new Path2(Rx_Position, level1.Coordinates, level2.Coordinates, Tx_Position, distance, angular_gain);
                     SecondOrderPaths[index] = temp_path2;
 
-                    OutputDelays[index] = distance / Speed_of_Light;
+                    OutputDelays[index] = distance;// / Speed_of_Light;
                     OutputAmplitudes[index] = angular_gain * (float)Math.Pow(1 / distance, 2);
                 }
             }

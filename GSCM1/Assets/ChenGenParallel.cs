@@ -5,7 +5,7 @@ using System.Linq;
 using Unity.Jobs;
 using Unity.Collections;
 using Unity.Burst;
-using Unity.Mathematics;
+//using Unity.Mathematics;
 using System;
 //using System.Numerics;
 
@@ -18,12 +18,16 @@ public class ChenGenParallel : MonoBehaviour
 
     // defining the properties of .11p signals
     public System.Numerics.Complex[] H = new System.Numerics.Complex[1024]; // Half of LTE BandWidth, instead of 2048 subcarriers
+    public System.Numerics.Complex[] H_old = new System.Numerics.Complex[1024]; // Half of LTE BandWidth, instead of 2048 subcarriers
+    public System.Numerics.Complex[] H_pure = new System.Numerics.Complex[1024]; // Half of LTE BandWidth, instead of 2048 subcarriers
+    public System.Numerics.Complex[] H_noise = new System.Numerics.Complex[1024]; // Half of LTE BandWidth, instead of 2048 subcarriers
     public NativeArray<System.Numerics.Complex> H_LoS; // creat a NativeArray that will be used to calculate channel response in parallel manner
     public NativeArray<System.Numerics.Complex> H_MPC1;
     public NativeArray<System.Numerics.Complex> H_MPC2;
     public NativeArray<System.Numerics.Complex> H_MPC3;
     public NativeArray<float> Subcarriers;
-    
+    public NativeArray<float> InverseWavelength;
+
 
     //List<List<GeoComp>> GlobeCom2;
     //List<List<GeoComp>> GlobeCom3;
@@ -57,6 +61,8 @@ public class ChenGenParallel : MonoBehaviour
         { H_MPC3.Dispose(); }
         if (Subcarriers.IsCreated)
         { Subcarriers.Dispose(); }
+        if (InverseWavelength.IsCreated)
+        { InverseWavelength.Dispose(); }
         if (SeenMPC1Table.IsCreated)
         { SeenMPC1Table.Dispose(); }
         if (SeenMPC2Table.IsCreated)
@@ -96,6 +102,8 @@ public class ChenGenParallel : MonoBehaviour
     /// </summary>
     double[] Y_output;
     double[] H_output;
+    double[] Y_noise_output;
+    double[] H_noise_output;
     double[] X_inputValues;
     [Space(10)]
     [Header("CHARTS FOR DRAWING")]
@@ -115,7 +123,18 @@ public class ChenGenParallel : MonoBehaviour
     public Path2 empty_path2 = new Path2(new Vector3(0, 0, 0), new Vector3(0, 0, 0), new Vector3(0, 0, 0), new Vector3(0, 0, 0), 0f, 0f);
     public Path1 empty_path = new Path1(new Vector3(0, 0, 0), new Vector3(0, 0, 0), new Vector3(0, 0, 0), 0f, 0f);
 
-    
+    public System.Random rand = new System.Random(); //reuse this if you are generating many
+
+    // for simulating the edge effect
+    [HideInInspector] public int flag_LoS;
+    [HideInInspector] public int FixUpdateCount = 0;
+    [HideInInspector] public int LoS_Start = 0;
+    [HideInInspector] public int LoS_End = 0;
+    [HideInInspector] public float EdgeEffect_LoS = 0;
+
+    [HideInInspector] public GameObject textobject;
+    public float RelativePermitivity = 5.0f;
+    [HideInInspector] public float Z;
 
     // Start is called before the first frame update
     void Start()
@@ -125,6 +144,8 @@ public class ChenGenParallel : MonoBehaviour
         for (int i = 0; i < H.Length; i++)
         { X_inputValues[i] = i; }
 
+        // ground reflection
+        Z = (float)Math.Sqrt(RelativePermitivity - 1);
 
         // finding the script
         GameObject LookUpT = GameObject.Find("LookUpTables");
@@ -141,18 +162,23 @@ public class ChenGenParallel : MonoBehaviour
 
         // initialize the H_parallel NativeArray
         H_LoS = new NativeArray<System.Numerics.Complex>(H.Length, Allocator.Persistent); // Check if one array can be used by a number of jobs and correctly changed
+        flag_LoS = 0; // flag will be needed for the edge effect
         H_MPC1 = new NativeArray<System.Numerics.Complex>(H.Length, Allocator.Persistent);
         H_MPC2 = new NativeArray<System.Numerics.Complex>(H.Length, Allocator.Persistent);
         H_MPC3 = new NativeArray<System.Numerics.Complex>(H.Length, Allocator.Persistent);
         Subcarriers = new NativeArray<float>(H.Length, Allocator.Persistent);
+        InverseWavelength = new NativeArray<float>(H.Length, Allocator.Persistent);
         for (int i = 0; i < H.Length; i++)
         {
             H[i] = new System.Numerics.Complex(0, 0);
+            H_pure[i] = new System.Numerics.Complex(0, 0);
+            H_noise[i] = new System.Numerics.Complex(0, 0);
             H_LoS[i] = new System.Numerics.Complex(0, 0);
             H_MPC1[i] = new System.Numerics.Complex(0, 0);
             H_MPC2[i] = new System.Numerics.Complex(0, 0);
             H_MPC3[i] = new System.Numerics.Complex(0, 0);
             Subcarriers[i] = CarrierFrequency + fsubcarriers * (i + 1);
+            InverseWavelength[i] = Subcarriers[i] / SpeedofLight;
         }
 
         // test allocation nativearrays
@@ -208,6 +234,7 @@ public class ChenGenParallel : MonoBehaviour
 
     private void FixedUpdate()
     {
+        FixUpdateCount += 1;
         Rx_MPC1 = Rx_Seen_MPC_Script.seen_MPC1;
         Rx_MPC2 = Rx_Seen_MPC_Script.seen_MPC2;
         Rx_MPC3 = Rx_Seen_MPC_Script.seen_MPC3;
@@ -216,7 +243,7 @@ public class ChenGenParallel : MonoBehaviour
         Tx_MPC2 = Tx_Seen_MPC_Script.seen_MPC2;
         Tx_MPC3 = Tx_Seen_MPC_Script.seen_MPC3;
 
-        NativeList<JobHandle> jobHandleList_Channel = new NativeList<JobHandle>(Allocator.Temp);
+        //NativeList<JobHandle> jobHandleList_Channel = new NativeList<JobHandle>(Allocator.Temp);
 
         /*
         for (int i = 0; i < H.Length; i++)
@@ -234,34 +261,78 @@ public class ChenGenParallel : MonoBehaviour
 
         float dtLoS = 0;
         float PathGainLoS = 0;
+        float LOS_distance = 0;
 
         if (!Physics.Linecast(Tx.transform.position, Rx.transform.position))
         {
+
+            flag_LoS = 1;
+            if (LoS_Start == 0) { LoS_Start = FixUpdateCount; Debug.Log("LoS Start " + LoS_Start); } // finding the start time of LoS
+
             if (LOS_Tracer)
             {
                 Debug.DrawLine(Tx.transform.position, Rx.transform.position, Color.magenta);
             }
 
-            float LOS_distance = (Tx.transform.position - Rx.transform.position).magnitude;
+            LOS_distance = (Tx.transform.position - Rx.transform.position).magnitude;
             //LOS_distance = 200;
             dtLoS = LOS_distance / SpeedofLight;// + 1000/SpeedofLight;
             PathGainLoS = (float)Math.Pow(1 / LOS_distance, 2);
 
+            float hbyd = 3.4f / LOS_distance; // 2h/d; h = 1.7meters
+            float Rparallel = (RelativePermitivity * hbyd - Z) / (RelativePermitivity * hbyd + Z);
+            float Rperpendicular = (hbyd - Z) / (hbyd + Z);
+            float Rcoef = (float)Math.Sqrt(0.5f * (Rparallel * Rparallel + Rperpendicular * Rperpendicular));
+
+            //PathGainLoS -= PathGainLoS * Rcoef * Rcoef / 2;
+            //float h2byd = 5.78f / LOS_distance; // 2 h^2/2
+
+            EdgeEffect(FixUpdateCount - LoS_Start, out EdgeEffect_LoS); 
+
+            // the follwing can be done due to manual calculation of the LoS End
+            if (FixUpdateCount > 100 && FixUpdateCount < 126)
+            {
+                EdgeEffect(124 - FixUpdateCount, out EdgeEffect_LoS);
+            }
+            
         }
-        
+        /*else
+        {
+            if (flag_LoS == 1)
+            { 
+                flag_LoS = 2; 
+                LoS_End = FixUpdateCount; 
+                Debug.Log("LoS End " + LoS_End);
+                // remember the last LoS channel
+                for (int i = 0; i < H_LoS.Length; i++)
+                {
+                    H_old[i] = H_LoS[i];
+                }
+            } // finding the end time of LoS
+        }*/
+
+        //Debug.Log("Edge effect coefficient = " + EdgeEffect_LoS);
+
+
+
         var dtLoSParallel = new NativeArray<float>(1, Allocator.TempJob);
+        var distanceLoSParallel = new NativeArray<float>(1, Allocator.TempJob);
         var PathGainLoSParallel = new NativeArray<float>(1, Allocator.TempJob);
         for (int i = 0; i < dtLoSParallel.Length; i++)
         {
             dtLoSParallel[i] = dtLoS;
+            distanceLoSParallel[i] = LOS_distance;
             PathGainLoSParallel[i] = PathGainLoS;
         }
 
         ChannelParallel channelParallel = new ChannelParallel
         {
-            TimeDelayArray = dtLoSParallel,
+            //TimeDelayArray = dtLoSParallel,
+            //FrequencyArray = Subcarriers,
             PathsGainArray = PathGainLoSParallel,
-            FrequencyArray = Subcarriers,
+            
+            TimeDelayArray = distanceLoSParallel,
+            FrequencyArray = InverseWavelength,
 
             HH = H_LoS,
         };
@@ -272,6 +343,7 @@ public class ChenGenParallel : MonoBehaviour
         //JobHandle.CompleteAll(jobHandleList_Channel);
         jobHandleLoSChannel.Complete();
         dtLoSParallel.Dispose();
+        distanceLoSParallel.Dispose();
         PathGainLoSParallel.Dispose();
         ///////////////////////////////////////////////////////////////////////////////////
         /// MPC1
@@ -326,9 +398,11 @@ public class ChenGenParallel : MonoBehaviour
         // channel calculation
         ChannelParallel channelParallelMPC1 = new ChannelParallel
         {
-            TimeDelayArray = dtMPC1Array,
+            //TimeDelayArray = dtMPC1Array,
+            //FrequencyArray = Subcarriers,
             PathsGainArray = PathGainMPC1,
-            FrequencyArray = Subcarriers,
+            TimeDelayArray = dtMPC1Array, // changed to distances
+            FrequencyArray = InverseWavelength,
 
             HH = H_MPC1,
         };
@@ -336,6 +410,7 @@ public class ChenGenParallel : MonoBehaviour
         // we add the job to the list of jobs related to channel calculation in order to complete them all at once later
         //jobHandleList_Channel.Add(jobHandleChannelMPC1);
         jobHandleChannelMPC1.Complete();
+
 
         RxArray1.Dispose();
         TxArray1.Dispose();
@@ -408,9 +483,11 @@ public class ChenGenParallel : MonoBehaviour
         // channel calculation
         ChannelParallel channelParallelMPC2 = new ChannelParallel
         {
-            TimeDelayArray = dtArrayMPC2,
+            //TimeDelayArray = dtArrayMPC2,
+            //FrequencyArray = Subcarriers,
             PathsGainArray = PathGainMPC2,
-            FrequencyArray = Subcarriers,
+            TimeDelayArray = dtArrayMPC2, // changed to distances
+            FrequencyArray = InverseWavelength,
 
             HH = H_MPC2,
         };
@@ -555,9 +632,11 @@ public class ChenGenParallel : MonoBehaviour
         // channel calculation
         ChannelParallel channelParallelMPC3 = new ChannelParallel
         {
-            TimeDelayArray = dtArrayMPC3,
+            //TimeDelayArray = dtArrayMPC3,
+            //FrequencyArray = Subcarriers,
             PathsGainArray = PathGainMPC3,
-            FrequencyArray = Subcarriers,
+            TimeDelayArray = dtArrayMPC3, // changed to distances
+            FrequencyArray = InverseWavelength,
 
             HH = H_MPC3,
         };
@@ -614,19 +693,28 @@ public class ChenGenParallel : MonoBehaviour
         //jobHandleList_Channel.Complete();
 
         //double asd = System.Numerics.Complex.Abs( H_MPC2[0]);
+
+
+        double factor = 10000000 * 32; // this corresponds to a -110 dBm noise floor; 32 comes from the sqrt of 1024
+
+
         for (int i = 0; i < H.Length; i++)
         {
-
+            double u1 = 1.0 - rand.NextDouble(); //uniform(0,1] random doubles
+            double u2 = 1.0 - rand.NextDouble();
+            double randStdNormal = Math.Sqrt(-2.0 * Math.Log(u1)) * Math.Sin(2.0 * Math.PI * u2)/factor;
             //H[i] = H_LoS[i];
             //H[i] = H_MPC1[i];
             //H[i] = H_MPC2[i];
 
             //H[i] = H_LoS[i] + H_MPC1[i];
-            H[i] = H_LoS[i] + H_MPC1[i] + H_MPC2[i] + H_MPC3[i];
+            H[i] = H_LoS[i] * EdgeEffect_LoS + H_MPC1[i] + H_MPC2[i] + H_MPC3[i] + randStdNormal;
+            H_pure[i] = H_LoS[i] * EdgeEffect_LoS + H_MPC1[i] + H_MPC2[i] + H_MPC3[i];
+            //H_noise[i] = randStdNormal;
             //H[i] = H_MPC3[i];
 
             // zeroing all the inputs
-            H_LoS[i] = new System.Numerics.Complex(0,0);
+            // H_LoS[i] = new System.Numerics.Complex(0,0);
             H_MPC1[i] = new System.Numerics.Complex(0, 0);
             H_MPC2[i] = new System.Numerics.Complex(0, 0);
             H_MPC3[i] = new System.Numerics.Complex(0, 0);
@@ -637,31 +725,35 @@ public class ChenGenParallel : MonoBehaviour
 
         
         System.Numerics.Complex[] outputSignal_Freq = FastFourierTransform.FFT(H, false);
+        System.Numerics.Complex[] outputNoise_Freq = FastFourierTransform.FFT(H_noise, false);
 
         Y_output = new double[H.Length];
         H_output = new double[H.Length];
+        Y_noise_output = new double[H.Length];
+        H_noise_output = new double[H.Length];
         //get module of complex number
+        double RSS = 0;
         for (int ii = 0; ii < H.Length; ii++)
         {
-            //Debug.Log(ii);
-            if (System.Numerics.Complex.Abs(outputSignal_Freq[ii]) > 0)
-            {
-                Y_output[ii] = 10 * Math.Log10(System.Numerics.Complex.Abs(outputSignal_Freq[ii]));// + 0.0000000000001);
-                H_output[ii] = 10 * Math.Log10(System.Numerics.Complex.Abs(H[ii]));// + 0.0000000000001);
-            }
-            else 
-            {
-                Y_output[ii] = 10 * Math.Log10(System.Numerics.Complex.Abs(outputSignal_Freq[ii]) + 0.0000000000001);
-                H_output[ii] = 10 * Math.Log10(System.Numerics.Complex.Abs(H[ii]) + 0.0000000000001);
-            }
-            //Y_output[ii] = (System.Numerics.Complex.Abs(outputSignal_Freq[ii]) + 0.0000000000001);
-            //H_output[ii] = (System.Numerics.Complex.Abs(H[ii]) + 0.0000000000001);
-            //if (ii < 50)
-            //{ H_output[ii] = 0.1; }
-            //H[ii] = new System.Numerics.Complex(0, 0);
+            Y_output[ii] = 10 * Math.Log10(System.Numerics.Complex.Abs(outputSignal_Freq[ii]));// + 0.0000000000001);
+            H_output[ii] = 10 * Math.Log10(System.Numerics.Complex.Abs(H[ii]));// + 0.0000000000001);
+
+            //Y_noise_output[ii] = 10 * Math.Log10(System.Numerics.Complex.Abs(outputNoise_Freq[ii]));// + 0.0000000000001);
+            //H_noise_output[ii] = 10 * Math.Log10(System.Numerics.Complex.Abs(H_noise[ii]));// + 0.0000000000001);
+
+            // calculatig pure signal's RSSI, should be clarified
+            //RSSI += System.Numerics.Complex.Abs(H_pure[ii]);
+            RSS += 1000 * Math.Pow(System.Numerics.Complex.Abs(H_pure[ii]), 2);
         }
+        //Drawing.drawChart(tfTime, X_inputValues, Y_noise_output, "time");
+        //Drawing.drawChart(tfFreq, X_inputValues, H_noise_output, "frequency");
+
         Drawing.drawChart(tfTime, X_inputValues, Y_output, "time");
         Drawing.drawChart(tfFreq, X_inputValues, H_output, "frequency");
+
+        
+
+        //Debug.Log("RSS = " + 10* Math.Log10( RSS ) );
         
 
         
@@ -674,8 +766,20 @@ public class ChenGenParallel : MonoBehaviour
     }
 
 
-    
-    
+
+    void EdgeEffect(int Index, out float EdgeCoefficient)
+    {
+        float factor = (float)Math.PI / 20;
+
+        if (Index < 0)
+        { EdgeCoefficient = 0; }
+        else if (Index < 20)
+        {
+            EdgeCoefficient = ((float)Math.Sin(-Math.PI / 2 + Index * factor) + 1)*0.5f;
+        }
+        else
+        { EdgeCoefficient = 1; }
+    }
 }
 
 
@@ -699,7 +803,7 @@ public struct ChannelParallel : IJobParallelFor
             // defining exponent
             System.Numerics.Complex exponent = new System.Numerics.Complex(cosine, sine);
 
-            temp_channel = PathsGainArray[0] * exponent;
+            temp_channel = PathsGainArray[0] * exponent * 0.447 / 32; // quick fix of the transmitter's power, this comes from sqrt(0.2/1024), where 0.2 W = 200 mW
         }
         else
         {
@@ -712,7 +816,50 @@ public struct ChannelParallel : IJobParallelFor
                     // defining exponent
                     System.Numerics.Complex exponent = new System.Numerics.Complex(cosine, sine);
 
-                    temp_channel = temp_channel + PathsGainArray[i] * exponent;
+                    temp_channel += PathsGainArray[i] * exponent * 0.447 / 32; // quick fix of the transmitter's power, this comes from sqrt(0.2/1024), where 0.2 W = 200 mW
+                }
+            }
+        }
+        HH[index] = temp_channel;
+    }
+}
+
+
+
+[BurstCompile]
+public struct ChannelParallelStable : IJobParallelFor
+{
+    [ReadOnly] public NativeArray<float> DistancesArray;
+    [ReadOnly] public NativeArray<float> PathsGainArray;
+
+    [ReadOnly] public NativeArray<float> InverseWavelengthArray;
+
+    [WriteOnly] public NativeArray<System.Numerics.Complex> HH;
+
+    public void Execute(int index)
+    {
+        System.Numerics.Complex temp_channel = new System.Numerics.Complex(0, 0);
+        if (DistancesArray.Length == 1)
+        {
+            double cosine = Math.Cos(2 * Math.PI * InverseWavelengthArray[index] * DistancesArray[0]);
+            double sine = Math.Sin(2 * Math.PI * InverseWavelengthArray[index] * DistancesArray[0]);
+            // defining exponent
+            System.Numerics.Complex exponent = new System.Numerics.Complex(cosine, sine);
+
+            temp_channel = PathsGainArray[0] * exponent * 100;
+        }
+        else
+        {
+            for (int i = 0; i < DistancesArray.Length; i++)
+            {
+                if (DistancesArray[i] > 0)
+                {
+                    double cosine = Math.Cos(2 * Math.PI * InverseWavelengthArray[index] * DistancesArray[i]);
+                    double sine = Math.Sin(2 * Math.PI * InverseWavelengthArray[index] * DistancesArray[i]);
+                    // defining exponent
+                    System.Numerics.Complex exponent = new System.Numerics.Complex(cosine, sine);
+
+                    temp_channel += PathsGainArray[i] * exponent * 100;
                 }
             }
         }
@@ -837,7 +984,7 @@ public struct CommonMPC1Parallel : IJobParallelFor
                     float distance = rx_distance + tx_distance;
                     Path1 temp_Path1 = new Path1(Rx_Point, MPC1[Array2[index]].Coordinates, Tx_Point, distance, angular_gain);
                     Output[index] = temp_Path1;
-                    OutputDelays[index] = distance / Speed_of_Light;
+                    OutputDelays[index] = distance;// / Speed_of_Light;
                     OutputAmplitudes[index] = angular_gain * (float)Math.Pow(1 / distance, 2);
                 }
                 break;

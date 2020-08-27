@@ -53,6 +53,9 @@ public class LookUpTableGen : MonoBehaviour
                 if (i != ii)
                 {
                     Vector3 temp_direction = (MPC2[ii].Coordinates - MPC2[i].Coordinates).normalized;
+                    //RaycastHit hit;
+                    //if (Physics.Linecast(MPC2[i].Coordinates, MPC2[ii].Coordinates, out hit))
+                    //{ Debug.Log("name of the hit object" + hit.transform.name); }
                     if(!Physics.Linecast(MPC2[i].Coordinates, MPC2[ii].Coordinates))
                     {
                         if (Vector3.Dot(temp_direction, MPC2[ii].Normal) < -angle_threshold2 && Vector3.Dot(temp_direction, MPC2[i].Normal) > angle_threshold2)

@@ -4597,6 +4597,26 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 5322890320825385475, guid: 84602fc8ccf6de04898e4e4e57389268,
+        type: 3}
+      propertyPath: m_Enabled
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5322890320825385476, guid: 84602fc8ccf6de04898e4e4e57389268,
+        type: 3}
+      propertyPath: m_CastShadows
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5322890320825385476, guid: 84602fc8ccf6de04898e4e4e57389268,
+        type: 3}
+      propertyPath: m_ReceiveShadows
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5322890320825385476, guid: 84602fc8ccf6de04898e4e4e57389268,
+        type: 3}
+      propertyPath: m_DynamicOccludee
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 84602fc8ccf6de04898e4e4e57389268, type: 3}
 --- !u!1 &925066697
@@ -5843,6 +5863,14 @@ MonoBehaviour:
   MPC3_Tracer: 1
   tfTime: {fileID: 1144777040}
   tfFreq: {fileID: 956427315}
+  flag_LoS: 0
+  FixUpdateCount: 0
+  LoS_Start: 0
+  LoS_End: 0
+  EdgeEffect_LoS: 0
+  textobject: {fileID: 0}
+  RelativePermitivity: 5
+  Z: 0
 --- !u!1 &1159693618
 GameObject:
   m_ObjectHideFlags: 0
@@ -9825,6 +9853,26 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 1796079081829999531, guid: 481649cef6f78bf49a66357703bd2a66,
+        type: 3}
+      propertyPath: m_ReceiveShadows
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1796079081829999531, guid: 481649cef6f78bf49a66357703bd2a66,
+        type: 3}
+      propertyPath: m_DynamicOccludee
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1796079081829999531, guid: 481649cef6f78bf49a66357703bd2a66,
+        type: 3}
+      propertyPath: m_CastShadows
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1796079081829999532, guid: 481649cef6f78bf49a66357703bd2a66,
+        type: 3}
+      propertyPath: m_Enabled
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 1796079081829999535, guid: 481649cef6f78bf49a66357703bd2a66,
         type: 3}
       propertyPath: m_Name
@@ -10003,7 +10051,7 @@ GameObject:
   - component: {fileID: 1965545363}
   - component: {fileID: 1965545362}
   m_Layer: 0
-  m_Name: Cube
+  m_Name: WhiteBoard
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

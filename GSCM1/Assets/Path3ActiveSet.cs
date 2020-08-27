@@ -62,7 +62,7 @@ public struct Path3ActiveSet : IJobParallelFor
 
                         var total_distance = InputArray[temp_out_index].Distance + CompareArray[i].Distance;
                         Output[index] = new Path3(InputArray[temp_out_index].Point, InputArray[temp_out_index].MPC3_1, InputArray[temp_out_index].MPC3_2, CompareArray[i].MPC3_1, CompareArray[i].Point, total_distance, angular_gain);
-                        OutputDelays[index] = total_distance / Speed_of_Light;
+                        OutputDelays[index] = total_distance;// / Speed_of_Light;
                         OutputAmplitudes[index] = angular_gain * (float)Math.Pow(1 / total_distance, 2);
                         break;
                     }

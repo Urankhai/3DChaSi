@@ -13,7 +13,9 @@ public class Transceiver_Channel : MonoBehaviour
     public int Reachable_distance;
     // defining moved distance
     Vector3 d1; // for antenna #1
-    
+    Vector3 fwd; // vector represents the forward direction
+    Vector3 up; // vector represents the up direction
+
     // defining initial position of antennas and the area of search
     Vector3 old_position1; // for antenna #1
     
@@ -38,13 +40,18 @@ public class Transceiver_Channel : MonoBehaviour
     private int ZMAX_index3;
 
     public List<int> seen_MPC1 = new List<int>();
+    public List<float> seen_MPC1_att = new List<float>();
     public List<int> seen_MPC2 = new List<int>();
+    public List<float> seen_MPC2_att = new List<float>();
     public List<int> seen_MPC3 = new List<int>();
+    public List<float> seen_MPC3_att = new List<float>();
 
     //public bool Activate_MPCs;
     public bool Activate_MPC1;
     public bool Activate_MPC2;
     public bool Activate_MPC3;
+
+    public bool Antenna_pattern;
 
     ///////////////////////////////////////////////////////////////////////////////////
     /// Start reading data from other scripts
@@ -212,7 +219,13 @@ public class Transceiver_Channel : MonoBehaviour
     private void FixedUpdate()
     {
         d1 = transform.position - old_position1;
-        
+
+        fwd = transform.forward;
+        up = transform.up;
+
+        //Debug.DrawRay(transform.position, fwd, Color.red);
+        //Debug.DrawRay(transform.position, up, Color.yellow);
+
         // update the old position. Now, current position become old for the next position.
         old_position1 = transform.position;
         // in x axis
@@ -397,7 +410,7 @@ public class Transceiver_Channel : MonoBehaviour
 
         }
 
-        seen_MPC1 = new List<int>();
+        //seen_MPC1 = new List<int>();
         for (int i = 0; i < inarea_MPC1.Count; i++)
         {
 
@@ -407,6 +420,24 @@ public class Transceiver_Channel : MonoBehaviour
                 if (!Physics.Linecast(transform.position, MPC1[inarea_MPC1[i]].Coordinates))
                 {
                     seen_MPC1.Add(inarea_MPC1[i]);
+
+                    // Adding antenna radiation pattern
+                    if (Antenna_pattern)
+                    {
+                        float cos_az = Vector3.Dot(temp_direction.normalized, fwd);
+                        float cos_el = Vector3.Dot(temp_direction.normalized, up);
+                        float horizont_att = 0.5f - 0.5f * cos_az;
+
+                        float vertical_att;
+                        if (cos_el <= 0) { vertical_att = cos_el + 1; }
+                        else { vertical_att = 1 - cos_el; }
+
+                        //Debug.Log(vertical_att * horizont_att);
+                        seen_MPC1_att.Add(vertical_att * horizont_att);
+                    }
+                    else
+                    { seen_MPC1_att.Add(1f); }
+
                     if (Activate_MPC1)
                     {
                         int temp_number = inarea_MPC1[i];

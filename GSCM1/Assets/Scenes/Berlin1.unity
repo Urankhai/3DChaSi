@@ -998,7 +998,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1646981259178978, guid: 2dc42346e5313b34c93d598a61994629, type: 3}
       propertyPath: m_IsActive
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4870167790249810, guid: 2dc42346e5313b34c93d598a61994629, type: 3}
       propertyPath: m_LocalPosition.x
@@ -3062,7 +3062,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &579012049
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4351,11 +4351,15 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Reachable_distance: 70
   seen_MPC1: 
+  seen_MPC1_amp: []
   seen_MPC2: 
+  seen_MPC2_amp: []
   seen_MPC3: 
+  seen_MPC3_amp: []
   Activate_MPC1: 0
   Activate_MPC2: 0
   Activate_MPC3: 0
+  Antenna_pattern: 0
 --- !u!135 &856589360
 SphereCollider:
   m_ObjectHideFlags: 0
@@ -6073,11 +6077,15 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Reachable_distance: 70
   seen_MPC1: 
+  seen_MPC1_amp: []
   seen_MPC2: 
+  seen_MPC2_amp: []
   seen_MPC3: 
+  seen_MPC3_amp: []
   Activate_MPC1: 0
   Activate_MPC2: 0
   Activate_MPC3: 0
+  Antenna_pattern: 0
 --- !u!1 &1116957948
 GameObject:
   m_ObjectHideFlags: 0
@@ -8505,11 +8513,15 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Reachable_distance: 70
   seen_MPC1: 
+  seen_MPC1_amp: []
   seen_MPC2: 
+  seen_MPC2_amp: []
   seen_MPC3: 
+  seen_MPC3_amp: []
   Activate_MPC1: 0
   Activate_MPC2: 0
   Activate_MPC3: 0
+  Antenna_pattern: 1
 --- !u!1 &1534638524
 GameObject:
   m_ObjectHideFlags: 0

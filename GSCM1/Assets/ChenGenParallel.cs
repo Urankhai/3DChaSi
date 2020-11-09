@@ -83,14 +83,21 @@ public class ChenGenParallel : MonoBehaviour
     public GameObject Rx;
     Transceiver_Channel Rx_Seen_MPC_Script;
     List<int> Rx_MPC1;
+    List<float> Rx_MPC1_att;
     List<int> Rx_MPC2;
+    List<float> Rx_MPC2_att;
     List<int> Rx_MPC3;
+    List<float> Rx_MPC3_att;
+
     // extrecting Tx data
     public GameObject Tx;
     Transceiver_Channel Tx_Seen_MPC_Script;
     List<int> Tx_MPC1;
+    List<float> Tx_MPC1_att;
     List<int> Tx_MPC2;
+    List<float> Tx_MPC2_att;
     List<int> Tx_MPC3;
+    List<float> Tx_MPC3_att;
 
     public bool LOS_Tracer;
     public bool MPC1_Tracer;
@@ -236,12 +243,22 @@ public class ChenGenParallel : MonoBehaviour
     {
         FixUpdateCount += 1;
         Rx_MPC1 = Rx_Seen_MPC_Script.seen_MPC1;
+        Rx_MPC1_att = Rx_Seen_MPC_Script.seen_MPC1_att;
+
         Rx_MPC2 = Rx_Seen_MPC_Script.seen_MPC2;
+        Rx_MPC2_att = Rx_Seen_MPC_Script.seen_MPC2_att;
+
         Rx_MPC3 = Rx_Seen_MPC_Script.seen_MPC3;
+        Rx_MPC3_att = Rx_Seen_MPC_Script.seen_MPC3_att;
 
         Tx_MPC1 = Tx_Seen_MPC_Script.seen_MPC1;
+        Tx_MPC1_att = Tx_Seen_MPC_Script.seen_MPC1_att;
+
         Tx_MPC2 = Tx_Seen_MPC_Script.seen_MPC2;
+        Tx_MPC2_att = Tx_Seen_MPC_Script.seen_MPC2_att;
+
         Tx_MPC3 = Tx_Seen_MPC_Script.seen_MPC3;
+        Tx_MPC3_att = Tx_Seen_MPC_Script.seen_MPC3_att;
 
         //NativeList<JobHandle> jobHandleList_Channel = new NativeList<JobHandle>(Allocator.Temp);
 
@@ -265,6 +282,11 @@ public class ChenGenParallel : MonoBehaviour
 
         if (!Physics.Linecast(Tx.transform.position, Rx.transform.position))
         {
+            Vector3 LoS_dir = (Tx.transform.position - Rx.transform.position).normalized;
+            Vector3 Tx_fwd = Tx.transform.forward;
+            Vector3 Rx_fwd = Tx.transform.forward;
+            float cos_Tx = Vector3.Dot(-LoS_dir, Tx_fwd);
+            float cos_Rx = Vector3.Dot(LoS_dir, Rx_fwd);
 
             flag_LoS = 1;
             if (LoS_Start == 0) { LoS_Start = FixUpdateCount; Debug.Log("LoS Start " + LoS_Start); } // finding the start time of LoS
@@ -277,7 +299,7 @@ public class ChenGenParallel : MonoBehaviour
             LOS_distance = (Tx.transform.position - Rx.transform.position).magnitude;
             //LOS_distance = 200;
             dtLoS = LOS_distance / SpeedofLight;// + 1000/SpeedofLight;
-            PathGainLoS = (float)Math.Pow(1 / LOS_distance, 2);
+            PathGainLoS = (float)Math.Pow(1 / LOS_distance, 2) * 0.25f * (1 - cos_Rx - cos_Tx + cos_Rx*cos_Tx);
 
             float hbyd = 3.4f / LOS_distance; // 2h/d; h = 1.7meters
             float Rparallel = (RelativePermitivity * hbyd - Z) / (RelativePermitivity * hbyd + Z);
@@ -350,16 +372,23 @@ public class ChenGenParallel : MonoBehaviour
         ///////////////////////////////////////////////////////////////////////////////////
 
         var RxArray1 = new NativeArray<int>(Rx_MPC1.Count, Allocator.TempJob);
+        var RxArray1_att = new NativeArray<float>(Rx_MPC1.Count, Allocator.TempJob);
         var TxArray1 = new NativeArray<int>(Tx_MPC1.Count, Allocator.TempJob);
-        
+        var TxArray1_att = new NativeArray<float>(Tx_MPC1.Count, Allocator.TempJob);
+
         var possiblePath1 = new NativeArray<Path1>(Tx_MPC1.Count, Allocator.TempJob);
         var dtMPC1Array = new NativeArray<float>(Tx_MPC1.Count, Allocator.TempJob);
         var PathGainMPC1 = new NativeArray<float>(Tx_MPC1.Count, Allocator.TempJob);
         for (int i = 0; i < Rx_MPC1.Count; i++)
-        { RxArray1[i] = Rx_MPC1[i]; }
+        { 
+            RxArray1[i] = Rx_MPC1[i]; 
+            RxArray1_att[i] = Rx_MPC1_att[i]; 
+        }
+        
         for (int i = 0; i < Tx_MPC1.Count; i++)
         {
             TxArray1[i] = Tx_MPC1[i];
+            TxArray1_att[i] = Tx_MPC1_att[i];
             possiblePath1[i] = empty_path;
         }
         CommonMPC1Parallel commonMPC1Parallel = new CommonMPC1Parallel
@@ -367,7 +396,9 @@ public class ChenGenParallel : MonoBehaviour
             Speed_of_Light = SpeedofLight,
             MPC1 = SeenMPC1Table,
             Array1 = RxArray1,
+            Array1_att = RxArray1_att,
             Array2 = TxArray1,
+            Array2_att = TxArray1_att,
             Rx_Point = Rx.transform.position,
             Tx_Point = Tx.transform.position,
 
@@ -413,7 +444,9 @@ public class ChenGenParallel : MonoBehaviour
 
 
         RxArray1.Dispose();
+        RxArray1_att.Dispose();
         TxArray1.Dispose();
+        TxArray1_att.Dispose();
         possiblePath1.Dispose();
         dtMPC1Array.Dispose();
         PathGainMPC1.Dispose();
@@ -935,8 +968,10 @@ public struct CommonMPC1Parallel : IJobParallelFor
 {
     // parallel run performed only above this array
     [ReadOnly] public NativeArray<int> Array1;
+    [ReadOnly] public NativeArray<float> Array1_att;
     // this is a standard array
     [ReadOnly] public NativeArray<int> Array2;
+    [ReadOnly] public NativeArray<float> Array2_att;
     [ReadOnly] public NativeArray<V6> MPC1;
 
     [ReadOnly] public Vector3 Rx_Point, Tx_Point;
@@ -985,7 +1020,7 @@ public struct CommonMPC1Parallel : IJobParallelFor
                     Path1 temp_Path1 = new Path1(Rx_Point, MPC1[Array2[index]].Coordinates, Tx_Point, distance, angular_gain);
                     Output[index] = temp_Path1;
                     OutputDelays[index] = distance;// / Speed_of_Light;
-                    OutputAmplitudes[index] = angular_gain * (float)Math.Pow(1 / distance, 2);
+                    OutputAmplitudes[index] = Array2_att[index] * Array1_att[i] * angular_gain * (float)Math.Pow(1 / distance, 2);
                 }
                 break;
             }

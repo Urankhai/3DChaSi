@@ -82,6 +82,7 @@ public class ChenGenParallel : MonoBehaviour
     // extracting Rx data
     public GameObject Rx;
     Transceiver_Channel Rx_Seen_MPC_Script;
+    bool Rx_Antenna_pattern;
     List<int> Rx_MPC1;
     List<float> Rx_MPC1_att;
     List<int> Rx_MPC2;
@@ -92,6 +93,7 @@ public class ChenGenParallel : MonoBehaviour
     // extrecting Tx data
     public GameObject Tx;
     Transceiver_Channel Tx_Seen_MPC_Script;
+    bool Tx_Antenna_pattern;
     List<int> Tx_MPC1;
     List<float> Tx_MPC1_att;
     List<int> Tx_MPC2;
@@ -234,7 +236,9 @@ public class ChenGenParallel : MonoBehaviour
 
         // assigning sripts names to the Tx and Rx
         Tx_Seen_MPC_Script = Tx.GetComponent<Transceiver_Channel>();
+        Tx_Antenna_pattern = Tx_Seen_MPC_Script.Antenna_pattern;
         Rx_Seen_MPC_Script = Rx.GetComponent<Transceiver_Channel>();
+        Rx_Antenna_pattern = Rx_Seen_MPC_Script.Antenna_pattern;
     }
 
    
@@ -285,8 +289,19 @@ public class ChenGenParallel : MonoBehaviour
             Vector3 LoS_dir = (Tx.transform.position - Rx.transform.position).normalized;
             Vector3 Tx_fwd = Tx.transform.forward;
             Vector3 Rx_fwd = Tx.transform.forward;
-            float cos_Tx = Vector3.Dot(-LoS_dir, Tx_fwd);
-            float cos_Rx = Vector3.Dot(LoS_dir, Rx_fwd);
+            float cos_Tx = -1;
+            float cos_Rx = -1;
+            float K_antanne_pattern;
+
+            if (Tx_Antenna_pattern)
+            {
+                cos_Tx = Vector3.Dot(-LoS_dir, Tx_fwd);
+            }
+            if (Rx_Antenna_pattern)
+            { 
+                cos_Rx = Vector3.Dot(LoS_dir, Rx_fwd);
+            }
+            K_antanne_pattern = 0.25f * (1 - cos_Rx - cos_Tx + cos_Rx * cos_Tx);
 
             flag_LoS = 1;
             if (LoS_Start == 0) { LoS_Start = FixUpdateCount; Debug.Log("LoS Start " + LoS_Start); } // finding the start time of LoS
@@ -299,7 +314,7 @@ public class ChenGenParallel : MonoBehaviour
             LOS_distance = (Tx.transform.position - Rx.transform.position).magnitude;
             //LOS_distance = 200;
             dtLoS = LOS_distance / SpeedofLight;// + 1000/SpeedofLight;
-            PathGainLoS = (float)Math.Pow(1 / LOS_distance, 2) * 0.25f * (1 - cos_Rx - cos_Tx + cos_Rx*cos_Tx);
+            PathGainLoS = (float)Math.Pow(1 / LOS_distance, 2) * K_antanne_pattern;
 
             float hbyd = 3.4f / LOS_distance; // 2h/d; h = 1.7meters
             float Rparallel = (RelativePermitivity * hbyd - Z) / (RelativePermitivity * hbyd + Z);
@@ -455,6 +470,7 @@ public class ChenGenParallel : MonoBehaviour
         ///////////////////////////////////////////////////////////////////////////////////
 
         var level2MPC2 = new NativeArray<int>(Rx_MPC2.Count * MaxLengthOfSeenMPC2Lists, Allocator.TempJob);
+        var level2MPC2_att = new NativeArray<float>(Rx_MPC2.Count * MaxLengthOfSeenMPC2Lists, Allocator.TempJob);
         var possiblePath2 = new NativeArray<Path2>(Rx_MPC2.Count * MaxLengthOfSeenMPC2Lists, Allocator.TempJob);
         var dtArrayMPC2 = new NativeArray<float>(Rx_MPC2.Count * MaxLengthOfSeenMPC2Lists, Allocator.TempJob);
         var PathGainMPC2 = new NativeArray<float>(Rx_MPC2.Count * MaxLengthOfSeenMPC2Lists, Allocator.TempJob);
@@ -462,12 +478,17 @@ public class ChenGenParallel : MonoBehaviour
         for (int l = 0; l < Rx_MPC2.Count * MaxLengthOfSeenMPC2Lists; l++)
         {
             level2MPC2[l] = Rx_MPC2[Mathf.FloorToInt(l / MaxLengthOfSeenMPC2Lists)];
+            level2MPC2_att[l] = Rx_MPC2_att[Mathf.FloorToInt(l / MaxLengthOfSeenMPC2Lists)];
             possiblePath2[l] = empty_path2;
         }
 
         var TxMPC2Array = new NativeArray<int>(Tx_MPC2.Count, Allocator.TempJob);
+        var TxMPC2Array_att = new NativeArray<float>(Tx_MPC2.Count, Allocator.TempJob);
         for (int l = 0; l < Tx_MPC2.Count; l++)
-        { TxMPC2Array[l] = Tx_MPC2[l]; }
+        { 
+            TxMPC2Array[l] = Tx_MPC2[l];
+            TxMPC2Array_att[l] = Tx_MPC2_att[l];
+        }
 
         Path2ParallelSearch path2ParallelSearch = new Path2ParallelSearch
         {
@@ -477,7 +498,9 @@ public class ChenGenParallel : MonoBehaviour
             LookUpTable2ID = LookUpTable2ID,
             // must be disposed
             Rx_MPC2Array = level2MPC2,
+            Rx_MPC2Array_att = level2MPC2_att,
             Tx_MPC2 = TxMPC2Array,
+            Tx_MPC2_att = TxMPC2Array_att,
 
             // other data
             Rx_Position = Rx.transform.position,
@@ -530,8 +553,10 @@ public class ChenGenParallel : MonoBehaviour
         jobHandleChannelMPC2.Complete();
 
         level2MPC2.Dispose();
+        level2MPC2_att.Dispose();
         possiblePath2.Dispose();
         TxMPC2Array.Dispose();
+        TxMPC2Array_att.Dispose();
         dtArrayMPC2.Dispose();
         PathGainMPC2.Dispose();
 
@@ -547,18 +572,22 @@ public class ChenGenParallel : MonoBehaviour
         Vector3 Tx_Point = Tx.transform.position;
 
         NativeArray<int> Rx_Seen_MPC3 = new NativeArray<int>(Rx_MPC3.Count * MaxLengthOfSeenMPC3Lists, Allocator.TempJob);
+        NativeArray<float> Rx_Seen_MPC3_att = new NativeArray<float>(Rx_MPC3.Count * MaxLengthOfSeenMPC3Lists, Allocator.TempJob);
         NativeArray<Path3Half> RxReachableHalfPath3Array = new NativeArray<Path3Half>(Rx_MPC3.Count * MaxLengthOfSeenMPC3Lists, Allocator.TempJob);
         for (int l = 0; l < Rx_MPC3.Count * MaxLengthOfSeenMPC3Lists; l++)
         {
             Rx_Seen_MPC3[l] = Rx_MPC3[Mathf.FloorToInt(l / MaxLengthOfSeenMPC3Lists)];
+            Rx_Seen_MPC3_att[l] = Rx_MPC3_att[Mathf.FloorToInt(l / MaxLengthOfSeenMPC3Lists)];
             RxReachableHalfPath3Array[l] = empty_path3Half; 
         }
 
         NativeArray<int> Tx_Seen_MPC3 = new NativeArray<int>(Tx_MPC3.Count * MaxLengthOfSeenMPC3Lists, Allocator.TempJob);
+        NativeArray<float> Tx_Seen_MPC3_att = new NativeArray<float>(Tx_MPC3.Count * MaxLengthOfSeenMPC3Lists, Allocator.TempJob);
         NativeArray<Path3Half> TxReachableHalfPath3Array = new NativeArray<Path3Half>(Tx_MPC3.Count * MaxLengthOfSeenMPC3Lists, Allocator.TempJob);
         for (int l = 0; l < Tx_MPC3.Count * MaxLengthOfSeenMPC3Lists; l++)
         {
             Tx_Seen_MPC3[l] = Tx_MPC3[Mathf.FloorToInt(l / MaxLengthOfSeenMPC3Lists)];
+            Tx_Seen_MPC3_att[l] = Tx_MPC3_att[Mathf.FloorToInt(l / MaxLengthOfSeenMPC3Lists)];
             TxReachableHalfPath3Array[l] = empty_path3Half; 
         }
 
@@ -574,6 +603,7 @@ public class ChenGenParallel : MonoBehaviour
             Point = Rx_Point,
             // must be disposed
             Seen_MPC3 = Rx_Seen_MPC3,
+            Seen_MPC3_att = Rx_Seen_MPC3_att,
             ReachableHalfPath3 = RxReachableHalfPath3Array,
         };
         // create a job handle list
@@ -594,6 +624,7 @@ public class ChenGenParallel : MonoBehaviour
             Point = Tx_Point,
             // must be disposed
             Seen_MPC3 = Tx_Seen_MPC3,
+            Seen_MPC3_att = Tx_Seen_MPC3_att,
             ReachableHalfPath3 = TxReachableHalfPath3Array,
 
         };
@@ -714,8 +745,10 @@ public class ChenGenParallel : MonoBehaviour
 
 
         Rx_Seen_MPC3.Dispose();
+        Rx_Seen_MPC3_att.Dispose();
         RxReachableHalfPath3Array.Dispose();
         Tx_Seen_MPC3.Dispose();
+        Tx_Seen_MPC3_att.Dispose();
         TxReachableHalfPath3Array.Dispose();
 
         ///////////////////////////////////////////////////////////////////////////////////
@@ -910,6 +943,7 @@ public struct HalfPath3Set : IJobParallelFor
     [ReadOnly] public int MaxListsLength;
 
     [ReadOnly] public NativeArray<int> Seen_MPC3;
+    [ReadOnly] public NativeArray<float> Seen_MPC3_att;
 
     [WriteOnly] public NativeArray<Path3Half> ReachableHalfPath3;
     public void Execute(int index)
@@ -947,7 +981,7 @@ public struct HalfPath3Set : IJobParallelFor
                 { I3 = 0; }
                 else { I3 = 1; }
 
-                float angular_gain = (float)Math.Exp(-12 * ((theta1 + theta2 - 0.35) * I1 + (theta1 - 1.22) * I2 + (theta2 - 1.22) * I3));
+                float angular_gain = Seen_MPC3_att[index]*(float)Math.Exp(-12 * ((theta1 + theta2 - 0.35) * I1 + (theta1 - 1.22) * I2 + (theta2 - 1.22) * I3));
 
                 float distance2 = (level1.Coordinates - level2.Coordinates).magnitude;
                 float distance = distance1 + distance2;

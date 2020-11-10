@@ -410,7 +410,7 @@ public class Transceiver_Channel : MonoBehaviour
 
         }
 
-        //seen_MPC1 = new List<int>();
+        seen_MPC1 = new List<int>();
         for (int i = 0; i < inarea_MPC1.Count; i++)
         {
 
@@ -426,6 +426,8 @@ public class Transceiver_Channel : MonoBehaviour
                     {
                         float cos_az = Vector3.Dot(temp_direction.normalized, fwd);
                         float cos_el = Vector3.Dot(temp_direction.normalized, up);
+                        
+                        
                         float horizont_att = 0.5f - 0.5f * cos_az;
 
                         float vertical_att;
@@ -459,6 +461,24 @@ public class Transceiver_Channel : MonoBehaviour
                 if (!Physics.Linecast(transform.position, MPC2[inarea_MPC2[i]].Coordinates))
                 {
                     seen_MPC2.Add(inarea_MPC2[i]);
+                    if (Antenna_pattern)
+                    {
+                        float cos_az = Vector3.Dot(temp_direction.normalized, fwd);
+                        float cos_el = Vector3.Dot(temp_direction.normalized, up);
+
+
+                        float horizont_att = 0.5f - 0.5f * cos_az;
+
+                        float vertical_att;
+                        if (cos_el <= 0) { vertical_att = cos_el + 1; }
+                        else { vertical_att = 1 - cos_el; }
+
+                        //Debug.Log(vertical_att * horizont_att);
+                        seen_MPC2_att.Add(vertical_att * horizont_att);
+                    }
+                    else
+                    { seen_MPC2_att.Add(1f); }
+
                     if (Activate_MPC2)
                     {
                         int temp_number = inarea_MPC2[i];
@@ -480,6 +500,25 @@ public class Transceiver_Channel : MonoBehaviour
                 if (!Physics.Linecast(transform.position, MPC3[inarea_MPC3[i]].Coordinates))
                 {
                     seen_MPC3.Add(inarea_MPC3[i]);
+
+                    if (Antenna_pattern)
+                    {
+                        float cos_az = Vector3.Dot(temp_direction.normalized, fwd);
+                        float cos_el = Vector3.Dot(temp_direction.normalized, up);
+
+
+                        float horizont_att = 0.5f - 0.5f * cos_az;
+
+                        float vertical_att;
+                        if (cos_el <= 0) { vertical_att = cos_el + 1; }
+                        else { vertical_att = 1 - cos_el; }
+
+                        //Debug.Log(vertical_att * horizont_att);
+                        seen_MPC3_att.Add(vertical_att * horizont_att);
+                    }
+                    else
+                    { seen_MPC3_att.Add(1f); }
+
                     if (Activate_MPC3)
                     {
                         int temp_number = inarea_MPC3[i];

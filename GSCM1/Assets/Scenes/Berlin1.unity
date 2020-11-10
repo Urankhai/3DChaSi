@@ -231,9 +231,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Indexes_GC2: []
   MaxLengthOfSeenMPC2Lists: 0
+  MaxSeenDistanceMPC2: 50
   Indexes_GC3: []
   MaxLengthOfSeenMPC3Lists: 0
-  MaxSeenDistanceMPC3: 50
+  MaxSeenDistanceMPC3: 40
 --- !u!4 &18084766
 Transform:
   m_ObjectHideFlags: 0
@@ -4351,11 +4352,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Reachable_distance: 70
   seen_MPC1: 
-  seen_MPC1_amp: []
+  seen_MPC1_att: []
   seen_MPC2: 
-  seen_MPC2_amp: []
+  seen_MPC2_att: []
   seen_MPC3: 
-  seen_MPC3_amp: []
+  seen_MPC3_att: []
   Activate_MPC1: 0
   Activate_MPC2: 0
   Activate_MPC3: 0
@@ -6075,17 +6076,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cc03fe653168d1144a6c671290d24afd, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Reachable_distance: 70
+  Reachable_distance: 100
   seen_MPC1: 
-  seen_MPC1_amp: []
+  seen_MPC1_att: []
   seen_MPC2: 
-  seen_MPC2_amp: []
+  seen_MPC2_att: []
   seen_MPC3: 
-  seen_MPC3_amp: []
+  seen_MPC3_att: []
   Activate_MPC1: 0
   Activate_MPC2: 0
   Activate_MPC3: 0
-  Antenna_pattern: 0
+  Antenna_pattern: 1
 --- !u!1 &1116957948
 GameObject:
   m_ObjectHideFlags: 0
@@ -6221,10 +6222,10 @@ MonoBehaviour:
   MaxLengthOfSeenMPC3Lists: 0
   Rx: {fileID: 1533634962}
   Tx: {fileID: 1107463538}
-  LOS_Tracer: 0
-  MPC1_Tracer: 0
-  MPC2_Tracer: 0
-  MPC3_Tracer: 0
+  LOS_Tracer: 1
+  MPC1_Tracer: 1
+  MPC2_Tracer: 1
+  MPC3_Tracer: 1
   tfTime: {fileID: 1144777040}
   tfFreq: {fileID: 956427315}
   flag_LoS: 0
@@ -8511,13 +8512,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cc03fe653168d1144a6c671290d24afd, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Reachable_distance: 70
+  Reachable_distance: 100
   seen_MPC1: 
-  seen_MPC1_amp: []
+  seen_MPC1_att: []
   seen_MPC2: 
-  seen_MPC2_amp: []
+  seen_MPC2_att: []
   seen_MPC3: 
-  seen_MPC3_amp: []
+  seen_MPC3_att: []
   Activate_MPC1: 0
   Activate_MPC2: 0
   Activate_MPC3: 0

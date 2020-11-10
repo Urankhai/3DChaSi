@@ -15,7 +15,9 @@ public struct Path2ParallelSearch : IJobParallelFor
 
     // the folliwings are disposed after the parallel job
     [ReadOnly] public NativeArray<int> Rx_MPC2Array;
+    [ReadOnly] public NativeArray<float> Rx_MPC2Array_att;
     [ReadOnly] public NativeArray<int> Tx_MPC2;
+    [ReadOnly] public NativeArray<float> Tx_MPC2_att;
 
     // simple reads for the execution
     [ReadOnly] public Vector3 Rx_Position;
@@ -48,10 +50,15 @@ public struct Path2ParallelSearch : IJobParallelFor
 
             // check if level2 is seen by Tx
             int existence_flag = 0;
+            float Tx_att = 0f;
             for (int i = 0; i < Tx_MPC2.Length; i++)
             {
                 if (LookUpTable2[temp_l].MPCIndex == Tx_MPC2[i])
-                { existence_flag = 1; break; }
+                { 
+                    existence_flag = 1;
+                    Tx_att = Tx_MPC2_att[i];
+                    break; 
+                }
             }
 
             if (existence_flag == 1)
@@ -105,7 +112,7 @@ public struct Path2ParallelSearch : IJobParallelFor
                     SecondOrderPaths[index] = temp_path2;
 
                     OutputDelays[index] = distance;// / Speed_of_Light;
-                    OutputAmplitudes[index] = angular_gain * (float)Math.Pow(1 / distance, 2);
+                    OutputAmplitudes[index] = Tx_att * Rx_MPC2Array_att[index]*angular_gain * (float)Math.Pow(1 / distance, 2);
                 }
             }
         }
